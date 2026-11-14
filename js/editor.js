@@ -46,6 +46,12 @@
     const c = PyRunner.check(code.value, lesson.rules);
     renderGutter(c.result.error ? c.result.error.line : 0);
     writeConsole(c.result.output, c.result.error ? 'Line ' + c.result.error.line + ': ' + c.result.error.message : '', c.passed ? [] : c.messages);
+    try {
+      await PG.api('/api/progress.php', { body: { action: 'attempt', lesson_id: lesson.id, code: code.value } });
+    } catch (err) {
+      PG.toast(err.message, true);
+      if (!c.passed) return;
+    }
     if (!c.passed) return;
     btnCheck.disabled = true;
     scene.classList.add('is-bloom');
