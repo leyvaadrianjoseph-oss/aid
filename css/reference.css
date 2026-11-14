@@ -565,3 +565,6 @@ body[data-role="user"] { min-height: 100vh; background: linear-gradient(#52bddb 
 .plot.is-ready { border-color:#e7d078; box-shadow:0 6px 0 #7d633e,0 0 0 3px rgba(255,226,123,.25); cursor:pointer; }
 .plot.is-ready .plant-details { color:#fff7cb; background:rgba(38,91,57,.86); font-weight:900; }
 .plot.is-ready:hover { filter:brightness(1.08); transform:translateY(-3px); }
+
+.garden-decor-slot.is-filled { cursor:pointer; }
+.garden-decor-slot.is-filled:hover { filter:brightness(1.08); transform:translateY(-2px); }
