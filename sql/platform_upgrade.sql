@@ -459,3 +459,27 @@ revoke all on function record_lesson_attempt(uuid, integer, text) from public, a
 revoke all on function complete_lesson(uuid, integer, text, integer, integer) from public, anon, authenticated;
 grant execute on function record_lesson_attempt(uuid, integer, text) to service_role;
 grant execute on function complete_lesson(uuid, integer, text, integer, integer) to service_role;
+
+
+-- Combined garden loading RPC used by the PHP API.
+create or replace function garden_load(p_user_id uuid)
+returns jsonb
+language sql
+stable
+security definer
+set search_path = public
+as $$
+select jsonb_build_object(
+  'items', coalesce((select jsonb_agg(to_jsonb(si) order by si.cost_seeds, si.id) from shop_items si where si.is_active = true), '[]'::jsonb),
+  'plots', coalesce((select jsonb_agg(to_jsonb(gp) order by gp.slot) from garden_plots gp where gp.user_id = p_user_id), '[]'::jsonb),
+  'inventory', coalesce((select jsonb_agg(to_jsonb(gi) order by gi.item_id) from garden_inventory gi where gi.user_id = p_user_id), '[]'::jsonb),
+  'decor', coalesce((select jsonb_agg(to_jsonb(gd) order by gd.area, gd.slot) from garden_decor gd where gd.user_id = p_user_id), '[]'::jsonb),
+  'seeds', coalesce((select p.seeds from profiles p where p.id = p_user_id), 0),
+  'daily_purchased', coalesce((select dp.quantity from garden_daily_purchases dp where dp.user_id = p_user_id and dp.purchase_date = (now() at time zone 'Asia/Manila')::date), 0),
+  'daily_limit', 100
+);
+$$;
+
+revoke all on function garden_load(uuid) from public, anon, authenticated;
+grant execute on function garden_load(uuid) to service_role;
+
