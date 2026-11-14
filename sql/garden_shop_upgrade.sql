@@ -166,7 +166,7 @@ returns jsonb
 language plpgsql
 security definer
 set search_path = public
-as $
+as $$
 declare
   v_balance integer;
   v_cost integer;
@@ -243,7 +243,7 @@ begin
     'daily_limit', 100
   );
 end;
-$;
+$$;
 
 revoke all on function garden_plant(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function garden_load(uuid) to service_role;
