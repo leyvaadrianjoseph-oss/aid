@@ -97,15 +97,18 @@ if ($code === '') fail('Write your solution before checking it.', 422);
 $rules = is_array($lesson['rules']) ? $lesson['rules'] : [];
 $required = $rules['mustContain'] ?? [];
 if (!is_array($required)) $required = [];
+$normalizedCode = preg_replace('/\\s+/', '', $code);
 foreach ($required as $fragment) {
-    if (!is_string($fragment) || $fragment === '' || strpos($code, $fragment) === false) {
+    $normalizedFragment = is_string($fragment) ? preg_replace('/\\s+/', '', $fragment) : '';
+    if ($normalizedFragment === '' || strpos($normalizedCode, $normalizedFragment) === false) {
         fail('Your solution does not meet all of this lesson\'s requirements yet.', 422);
     }
 }
 $forbidden = $rules['mustNotContain'] ?? [];
 if (is_array($forbidden)) {
     foreach ($forbidden as $fragment) {
-        if (is_string($fragment) && $fragment !== '' && strpos($code, $fragment) !== false) {
+        $normalizedFragment = is_string($fragment) ? preg_replace('/\\s+/', '', $fragment) : '';
+        if ($normalizedFragment !== '' && strpos($normalizedCode, $normalizedFragment) !== false) {
             fail('Your solution uses something this lesson has not introduced yet.', 422);
         }
     }
