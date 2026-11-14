@@ -44,3 +44,80 @@ from (values
 ('File basics', 'Use with open() to work with files and close them automatically.', 'with open("notes.txt", "w") as file:\n    file.write("Hello garden")', null::integer, 'Tools', 'Intermediate', '["open","with","write"]', 'with open(path, mode) as file:', '["Using the wrong file mode","Forgetting that file paths depend on the working directory"]')
 ) as v(title, summary, example_code, unlock_lesson_id, category, difficulty, tags, syntax, common_errors)
 where not exists (select 1 from toolbox_topics t where lower(t.title) = lower(v.title));
+
+
+-- Atomic harvesting: verifies maturity and awards seeds/XP in the same transaction.
+create or replace function garden_harvest(
+  p_user_id uuid,
+  p_item_id integer,
+  p_slot integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_plot_id bigint;
+  v_planted_at timestamptz;
+  v_bonus integer;
+  v_growth_seconds integer;
+  v_cost integer;
+  v_kind text;
+  v_elapsed integer;
+  v_reward integer;
+  v_new_seeds integer;
+  v_new_xp integer;
+begin
+  if p_slot is null or p_slot < 0 or p_slot > 11 then
+    raise exception 'Invalid plot';
+  end if;
+
+  select gp.id, gp.planted_at, coalesce(gp.growth_bonus_seconds, 0),
+         greatest(60, coalesce(si.growth_seconds, 300)), si.cost_seeds, si.kind
+  into v_plot_id, v_planted_at, v_bonus, v_growth_seconds, v_cost, v_kind
+  from garden_plots gp
+  join shop_items si on si.id = gp.item_id
+  where gp.user_id = p_user_id
+    and gp.slot = p_slot
+    and gp.item_id = p_item_id
+  for update of gp;
+
+  if not found or v_kind <> 'seed' then
+    raise exception 'Plant not found';
+  end if;
+
+  v_elapsed := floor(extract(epoch from (now() - v_planted_at)))::integer + v_bonus;
+  if v_elapsed < v_growth_seconds then
+    raise exception 'Plant is not mature yet';
+  end if;
+
+  v_reward := greatest(1, floor(v_cost * 0.75)::integer);
+
+  update profiles
+  set seeds = seeds + v_reward,
+      xp = xp + 5
+  where id = p_user_id
+  returning seeds, xp into v_new_seeds, v_new_xp;
+
+  if not found then
+    raise exception 'Player profile not found';
+  end if;
+
+  delete from garden_plots where id = v_plot_id;
+
+  return jsonb_build_object(
+    'ok', true,
+    'action', 'harvest',
+    'item_id', p_item_id,
+    'slot', p_slot,
+    'reward_seeds', v_reward,
+    'reward_xp', 5,
+    'seeds', v_new_seeds,
+    'xp', v_new_xp
+  );
+end;
+$$;
+
+revoke all on function garden_harvest(uuid, integer, integer) from public, anon, authenticated;
+grant execute on function garden_harvest(uuid, integer, integer) to service_role;
