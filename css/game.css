@@ -104,3 +104,44 @@
 .node-lock { fill: var(--outline); }
 .map-wrap { max-width: 480px; margin-inline: auto; padding: 8px 12px 20px; }
 .win .row { justify-content: center; }
+
+/* Inside the Garden simulation */
+.garden-clock { display:flex; align-items:center; justify-content:space-between; gap:16px; margin:0 0 20px; }
+.garden-clock > div { display:flex; align-items:center; gap:10px; font-family:var(--font-head); }
+.garden-clock > div strong { font-size:1.2rem; }
+.garden-clock > div span:last-child { font-family:var(--font-body); font-size:.9rem; }
+.garden-clock p { margin:0; color:var(--muted); }
+.garden-landscape { position:relative; padding:14px; border:var(--line); border-radius:var(--radius); background:#DDF2FB; transition:background .5s; }
+.garden-night .garden-landscape { background:#172D50; }
+.garden-night .plots { background:#203B5D; }
+.garden-night .plot.is-empty { background:#60483F; }
+.garden-night .garden-clock { background:#263653; color:#F8E9BD; }
+.garden-night .garden-clock p { color:#D7DDF0; }
+.garden-night .garden-msg { background:#354564; color:#F8E9BD; }
+.garden-night .garden-help { color:#D7DDF0; }
+.plot.is-planted { position:relative; cursor:pointer; background:#8B4A38; }
+.plot.is-planted .plant-sprite { width:78%; height:72%; transition:transform .3s, opacity .3s; }
+.plot.is-planted.plant-seedling .plant-sprite { transform:scale(.55); opacity:.65; }
+.plot.is-planted.plant-growing .plant-sprite { transform:scale(.82); }
+.plot.is-planted.plant-mature .plant-sprite { transform:scale(1); }
+.plant-details { position:absolute; bottom:2px; left:2px; right:2px; padding:2px; border-radius:4px; background:rgba(255,255,255,.88); color:#2B1B14; font-size:.65rem; font-weight:800; text-align:center; }
+.plot.is-water-target { outline:4px solid #5EC0EE; }
+.garden-help { margin:12px 0 0; color:var(--muted); font-size:.9rem; }
+.fence-slots { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:5px; margin-bottom:10px; }
+.decor-slots { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:8px; margin-top:10px; }
+.garden-decor-slot { min-height:42px; display:grid; place-items:center; border:2px dashed #8B4A38; border-radius:8px; background:rgba(255,255,255,.35); color:#8B4A38; font-weight:800; cursor:pointer; }
+.garden-decor-slot .spr { width:32px; height:32px; }
+.fence-slots .garden-decor-slot { min-height:32px; }
+.garden-night .garden-decor-slot { background:rgba(255,255,255,.08); border-color:#D6C18B; color:#F8E9BD; }
+.garden-night .garden-decor-slot.is-filled { background:rgba(246,169,59,.2); }
+.inventory-panel { margin-top:18px; padding:14px; }
+.inventory-panel h3 { margin:0 0 10px; }
+.inventory-list { display:grid; gap:8px; }
+.inventory-item { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.inventory-item > span:nth-child(2) { flex:1; }
+.inventory-item .spr { width:36px; height:36px; }
+@media (max-width:700px) {
+  .garden-clock { align-items:flex-start; flex-direction:column; }
+  .garden-clock p { font-size:.9rem; }
+  .fence-slots { grid-template-columns:repeat(4,minmax(0,1fr)); }
+}
