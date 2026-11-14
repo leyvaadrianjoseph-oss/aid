@@ -568,3 +568,12 @@ body[data-role="user"] { min-height: 100vh; background: linear-gradient(#52bddb 
 
 .garden-decor-slot.is-filled { cursor:pointer; }
 .garden-decor-slot.is-filled:hover { filter:brightness(1.08); transform:translateY(-2px); }
+
+
+/* Recent XP reward history */
+.xp-history-card { padding:20px; background:#fffdf5; }
+.xp-history { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.xp-history-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 13px; border:1px solid #d7ddc9; border-radius:6px; background:#f7f8ed; }
+.xp-history-item > div { display:grid; gap:3px; }
+.xp-history-item small { color:#6d8174; font-size:.76rem; }
+.xp-history-amount { flex:none; color:#33865c; font:700 1rem var(--font-head); }
