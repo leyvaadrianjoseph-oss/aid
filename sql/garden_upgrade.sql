@@ -35,3 +35,39 @@ create table if not exists garden_decor (
 
 alter table garden_inventory enable row level security;
 alter table garden_decor enable row level security;
+
+-- Preserve items that older versions allowed users to place directly in plant plots.
+-- Tools become owned inventory; decorations move to their dedicated spaces when a valid
+-- destination is available. Any overflow remains visible in its original plot.
+insert into garden_inventory (user_id, item_id, quantity)
+select gp.user_id, gp.item_id, count(*)::integer
+from garden_plots gp
+join shop_items si on si.id = gp.item_id
+where si.kind = 'tool'
+group by gp.user_id, gp.item_id
+on conflict (user_id, item_id)
+do update set quantity = garden_inventory.quantity + excluded.quantity;
+
+delete from garden_plots gp
+using shop_items si
+where si.id = gp.item_id and si.kind = 'tool';
+
+insert into garden_decor (user_id, area, slot, item_id)
+select user_id, area, slot, item_id
+from (
+  select gp.user_id, gp.item_id, gp.slot,
+         case when si.sprite = 'fence' then 'fence' else 'decor' end as area
+  from garden_plots gp
+  join shop_items si on si.id = gp.item_id
+  where si.kind = 'decor'
+) legacy
+where (area = 'fence' and slot between 0 and 7)
+   or (area = 'decor' and slot between 0 and 3)
+on conflict (user_id, area, slot) do nothing;
+
+delete from garden_plots gp
+using shop_items si
+where si.id = gp.item_id
+  and si.kind = 'decor'
+  and ((si.sprite = 'fence' and gp.slot between 0 and 7)
+    or (si.sprite <> 'fence' and gp.slot between 0 and 3));
