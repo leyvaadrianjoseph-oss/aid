@@ -517,3 +517,46 @@ body[data-role="user"] { min-height: 100vh; background: linear-gradient(#52bddb 
   .season-widget { animation: none; }
   .season-rain, .season-sun, .season-leaves, .season-snow { animation: none; }
 }
+
+/* Expanded Toolbox and Progress components */
+.toolbox-filters { display:grid; grid-template-columns:2fr 1fr 1fr; gap:14px; padding:18px; margin-bottom:18px; background:#fff9e6; }
+.toolbox-filters .px-field { margin:0; }
+.topic-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:16px; align-items:start; }
+.topic { padding:20px; background:#fffdf5; }
+.topic__top,.topic__code-head,.activity-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.topic__category { margin:0 0 4px; color:#3c9369; font-size:.75rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+.topic__top h2 { margin:0; font-size:1.2rem; }
+.topic__difficulty { flex:none; padding:5px 9px; border-radius:5px; background:#e5efce; color:#41684f; font-size:.72rem; font-weight:800; }
+.topic__summary { margin:14px 0; color:#4e6d60; }
+.topic__label { margin:16px 0 7px; color:#496e5e; font-size:.82rem; }
+.topic__syntax,.topic__example { overflow:auto; padding:13px; border:1px solid #d4d8bf; border-radius:5px; background:#f1f3e9; color:#284c43; white-space:pre-wrap; font: .88rem/1.6 var(--font-code); }
+.topic__code-head { margin-top:14px; }
+.topic__code-head .topic__label { margin:0; }
+.topic__errors { margin:0; padding-left:20px; color:#765d4d; font-size:.88rem; }
+.topic__errors li+li { margin-top:5px; }
+.topic__actions { display:flex; justify-content:flex-end; margin-top:15px; }
+.topic.is-locked { opacity:.82; }
+.activity-card { padding:20px; background:#fff9e6; }
+.activity-heading { align-items:flex-start; margin-bottom:16px; }
+.activity-heading h2 { margin:0 0 5px; }
+.activity-heading p { margin:0; }
+.activity-legend { display:flex; align-items:center; gap:5px; color:#5d7668; font-size:.72rem; white-space:nowrap; }
+.activity-legend i,.activity-day { display:block; width:14px; height:14px; border:1px solid rgba(40,75,65,.12); border-radius:3px; }
+.activity-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; max-width:420px; }
+.activity-day { width:100%; aspect-ratio:1; min-height:20px; background:#e8eadc; }
+.activity-day.level-1,.activity-legend .level-1 { background:#c5e5a6; }
+.activity-day.level-2,.activity-legend .level-2 { background:#8dcc81; }
+.activity-day.level-3,.activity-legend .level-3 { background:#4d9e6c; }
+.activity-day.level-4,.activity-legend .level-4 { background:#246c54; }
+.activity-legend .level-0 { background:#e8eadc; }
+.mastery-row { margin-bottom:13px; }
+.milestone.is-earned { border-color:#8ab97e; background:#f0f8df; }
+.milestone__date { display:block; margin-top:5px; color:#43815c; font-weight:800; }
+@media(max-width:700px) {
+  .toolbox-filters { grid-template-columns:1fr; }
+  .activity-heading { flex-direction:column; }
+  .activity-legend { white-space:normal; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .topic,.topic * { scroll-behavior:auto; }
+}
