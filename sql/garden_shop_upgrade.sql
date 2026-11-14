@@ -155,5 +155,7 @@ begin
 end;
 $$;
 
+revoke all on function garden_load(uuid) from public, anon, authenticated;
+revoke all on function garden_purchase(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function garden_load(uuid) to service_role;
 grant execute on function garden_purchase(uuid, integer, integer) to service_role;
