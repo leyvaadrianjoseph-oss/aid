@@ -43,7 +43,7 @@ as $$
       select dp.quantity
       from garden_daily_purchases dp
       where dp.user_id = p_user_id
-        and dp.purchase_date = (now() at time zone 'UTC')::date
+        and dp.purchase_date = (now() at time zone 'Asia/Manila')::date
     ), 0),
     'daily_limit', 100
   );
@@ -65,7 +65,7 @@ declare
   v_kind text;
   v_active boolean;
   v_owned integer;
-  v_today date := (now() at time zone 'UTC')::date;
+  v_today date := (now() at time zone 'Asia/Manila')::date;
   v_used integer;
   v_total_cost bigint;
   v_new_balance integer;
