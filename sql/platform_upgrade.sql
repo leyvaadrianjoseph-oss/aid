@@ -46,6 +46,18 @@ alter table garden_inventory enable row level security;
 alter table garden_decor enable row level security;
 alter table garden_daily_purchases enable row level security;
 
+create table if not exists xp_history (
+  id bigserial primary key,
+  user_id uuid not null references profiles(id) on delete cascade,
+  amount integer not null,
+  source text not null,
+  source_id integer,
+  created_at timestamptz not null default now()
+);
+alter table xp_history enable row level security;
+create index if not exists idx_xp_history_user_created
+  on xp_history(user_id, created_at desc);
+
 -- Move legacy tools and decorations out of plant beds without duplicating
 -- rows already migrated by sql/garden_upgrade.sql.
 insert into garden_inventory(user_id, item_id, quantity)
@@ -203,6 +215,9 @@ begin
   if not found then
     raise exception 'Player profile not found';
   end if;
+
+  insert into xp_history(user_id, amount, source, source_id)
+  values (p_user_id, 5, 'garden_harvest', p_slot);
 
   delete from garden_plots where id = v_plot_id;
 
@@ -508,6 +523,9 @@ begin
                       xp = xp + p_reward_xp, streak = v_streak
   where id = p_user_id
   returning seeds, xp into v_seeds, v_xp;
+
+  insert into xp_history(user_id, amount, source, source_id)
+  values (p_user_id, p_reward_xp, 'lesson', p_lesson_id);
 
   return jsonb_build_object('awarded', true, 'seeds', v_seeds, 'xp', v_xp, 'streak', v_streak);
 end;
