@@ -6,6 +6,16 @@ alter table garden_plots
   add column if not exists growth_bonus_seconds integer not null default 0,
   add column if not exists last_watered_at timestamptz;
 
+update shop_items
+set growth_seconds = case sprite
+  when 'sunflower' then 300
+  when 'tulip' then 420
+  when 'mushroom' then 360
+  when 'cactus' then 600
+  else growth_seconds
+end
+where kind = 'seed' and growth_seconds = 300;
+
 create table if not exists garden_inventory (
   id bigserial primary key,
   user_id uuid not null references profiles(id) on delete cascade,
@@ -101,6 +111,20 @@ create index if not exists idx_toolbox_topics_category_title
 -- Persist earned achievements for each account.
 create unique index if not exists idx_user_achievements_user_achievement
   on user_achievements(user_id, achievement_id);
+
+-- Additional progression milestones; title checks keep this safe to rerun.
+insert into achievements(title, description, rule_key, threshold)
+select v.title, v.description, v.rule_key, v.threshold
+from (values
+  ('Trail explorer', 'Complete 5 Adventure lessons', 'lessons_done', 5),
+  ('Chapter climber', 'Complete 10 Adventure lessons', 'lessons_done', 10),
+  ('Python pathfinder', 'Complete 20 Adventure lessons', 'lessons_done', 20),
+  ('XP collector', 'Earn 500 XP', 'xp', 500),
+  ('Code gardener', 'Earn 1000 XP', 'xp', 1000),
+  ('Steady learner', 'Reach a 7 day learning streak', 'streak', 7),
+  ('Dedicated learner', 'Reach a 14 day learning streak', 'streak', 14)
+) as v(title, description, rule_key, threshold)
+where not exists (select 1 from achievements a where lower(a.title) = lower(v.title));
 
 -- Add useful topics without deleting or replacing existing entries.
 insert into toolbox_topics(title, summary, example_code, unlock_lesson_id, category, difficulty, tags, syntax, common_errors)
