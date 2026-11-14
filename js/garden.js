@@ -126,10 +126,13 @@
           const state = growth(plot, item);
           button.classList.add('is-planted', 'plant-' + state.stage.toLowerCase());
           button.append(PG.spriteEl(item.sprite, 'plant-sprite'));
-          button.append(PG.el('span', 'plant-details', state.stage + ' · ' + state.percent + '%'));
-          button.setAttribute('aria-label', item.name + ', ' + state.percent + '% grown, plot ' + (slot + 1));
+          button.append(PG.el('span', 'plant-details', state.progress >= 1 ? 'Ready · Harvest' : state.stage + ' · ' + state.percent + '%'));
+          if (state.progress >= 1) button.classList.add('is-ready');
+          button.setAttribute('aria-label', item.name + ', ' + (state.progress >= 1 ? 'ready to harvest' : state.percent + '% grown') + ', plot ' + (slot + 1));
           button.addEventListener('click', () => {
-            if (selectedAction === 'water' && selectedItem() && owned(canId()) > 0) {
+            if (state.progress >= 1) {
+              harvest(slot, Number(item.id));
+            } else if (selectedAction === 'water' && selectedItem() && owned(canId()) > 0) {
               water(slot, Number(item.id));
             } else if (selectedAction === 'plant') {
               PG.toast('That plot is occupied. Choose an empty plot.', true);
@@ -287,6 +290,12 @@
     await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'water', item_id: itemId, slot } }), item.name + ' watered. Growth boosted!');
   }
 
+  async function harvest(slot, itemId) {
+    const item = byId(itemId);
+    if (busy) return;
+    await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'harvest', item_id: itemId, slot } }), item.name + ' harvested! Seeds and XP added.');
+  }
+
   async function placeDecor(slot, targetArea) {
     const item = selectedItem();
     if (!item || selectedAction !== 'decor' || item.kind !== 'decor') {
@@ -316,11 +325,11 @@
       await reloadGarden();
       say('Choose a seed to plant, or select a tool or decoration from your inventory.');
       updateClock();
-      window.setInterval(() => { updateClock(); renderPlots(); }, 1000);
+      window.setInterval(updateClock, 1000);
+      window.setInterval(renderPlots, 15000);
     } catch (error) {
       say(error.message || 'Could not load your garden.', true);
       PG.toast(error.message || 'Could not load your garden.', true);
     }
   });
-  window.setInterval(updateClock, 1000);
 })();
