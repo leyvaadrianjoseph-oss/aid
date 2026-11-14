@@ -11,7 +11,8 @@ update shop_items set growth_seconds = case sprite
 where kind = 'seed';
 
 alter table garden_plots
-  add column if not exists growth_bonus_seconds integer not null default 0;
+  add column if not exists growth_bonus_seconds integer not null default 0,
+  add column if not exists last_watered_at timestamptz;
 
 create table if not exists garden_inventory (
   id bigserial primary key,
