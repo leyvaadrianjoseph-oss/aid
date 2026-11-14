@@ -17,7 +17,7 @@
   const clockName = document.getElementById('garden-time-name');
   const clockCountdown = document.getElementById('garden-time-countdown');
 
-  let items = [], plots = {}, inventory = {}, decor = [], seeds = 0;
+  let items = [], plots = {}, inventory = {}, decor = [], seeds = 0, dailyPurchased = 0, dailyLimit = 100;
   let selectedId = null, selectedAction = null, busy = false;
   const byId = (id) => items.find((item) => Number(item.id) === Number(id));
   const owned = (id) => Number(inventory[id] || 0);
@@ -196,14 +196,30 @@
       info.append(PG.el('strong', null, item.name));
       info.append(PG.el('small', null, item.cost_seeds + ' seeds' + (item.kind === 'seed' ? ' · ' + Math.ceil(Number(item.growth_seconds || 300) / 60) + ' min' : '')));
       card.append(info);
-      const button = PG.el('button', 'shop-action', item.kind === 'seed' ? 'Select' : isOwnedTool ? 'Owned' : 'Buy');
-      button.type = 'button';
-      button.disabled = item.kind === 'seed' ? false : (poor || isOwnedTool);
-      button.addEventListener('click', () => {
-        if (item.kind === 'seed') selectItem(item, 'plant');
-        else purchase(item);
-      });
-      card.append(button);
+      if (item.kind !== 'seed' && !isOwnedTool) {
+        const quantityWrap = PG.el('label', 'shop-quantity-wrap');
+        quantityWrap.append(PG.el('span', null, 'Quantity'));
+        const quantity = PG.el('input', 'shop-quantity');
+        quantity.type = 'number';
+        quantity.min = '1';
+        quantity.max = String(Math.max(1, Math.min(100, dailyLimit - dailyPurchased)));
+        quantity.value = '1';
+        quantity.inputMode = 'numeric';
+        quantity.setAttribute('aria-label', 'Quantity to buy for ' + item.name);
+        quantityWrap.append(quantity);
+        card.append(quantityWrap);
+        const button = PG.el('button', 'shop-action', 'Buy');
+        button.type = 'button';
+        button.disabled = poor || dailyPurchased >= dailyLimit;
+        button.addEventListener('click', () => purchase(item, Math.max(1, Math.min(100, Number(quantity.value) || 1))));
+        card.append(button);
+      } else {
+        const button = PG.el('button', 'shop-action', item.kind === 'seed' ? 'Select' : 'Owned');
+        button.type = 'button';
+        button.disabled = item.kind !== 'seed';
+        button.addEventListener('click', () => selectItem(item, 'plant'));
+        card.append(button);
+      }
       shopEl.append(card);
     });
   }
@@ -223,6 +239,8 @@
     (data.inventory || []).forEach((row) => { inventory[Number(row.item_id)] = Number(row.quantity); });
     decor = data.decor || [];
     seeds = Number(data.seeds || 0);
+    dailyPurchased = Number(data.daily_purchased || 0);
+    dailyLimit = Number(data.daily_limit || 100);
     PG.setStats({ seeds });
     if (selectedId !== null && !byId(selectedId)) { selectedId = null; selectedAction = null; }
     renderSelection(); renderPlots(); renderInventory(); renderDecor(); renderShop();
@@ -254,8 +272,11 @@
     await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'plant', item_id: item.id, slot } }), item.name + ' planted in plot ' + (slot + 1) + '.');
   }
 
-  async function purchase(item) {
-    await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'purchase', item_id: item.id } }), item.name + ' added to your inventory.');
+  async function purchase(item, quantity) {
+    const remaining = Math.max(0, dailyLimit - dailyPurchased);
+    if (remaining < 1) { say('You reached your daily limit of 100 items. Come back tomorrow!', true); return; }
+    const amount = Math.max(1, Math.min(Number(quantity) || 1, remaining));
+    await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'purchase', item_id: item.id, quantity: amount } }), amount + ' × ' + item.name + ' added to your inventory.');
   }
 
   async function water(slot, itemId) {
