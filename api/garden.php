@@ -51,14 +51,19 @@ if ($action === 'plant') {
     if (!array_key_exists('slot', $in)) fail('Pick an empty plot first.');
     if ($kind !== 'seed') fail('Choose a seed to plant.');
     $slot = int_in($in, 'slot', 0, 11, -1);
-    if (sb('GET', '/garden_plots?user_id=eq.' . $uid . '&slot=eq.' . $slot . '&select=id')) fail('That plot is already planted', 409);
-    $newBalance = garden_spend($me, (int)$item['cost_seeds']);
-    [$code] = sb_raw('POST', '/garden_plots', ['user_id' => $me['id'], 'slot' => $slot, 'item_id' => $itemId]);
+    [$code, $result] = sb_raw('POST', '/rpc/garden_plant', [
+        'p_user_id' => $me['id'],
+        'p_item_id' => $itemId,
+        'p_slot' => $slot
+    ]);
     if ($code < 200 || $code >= 300) {
-        garden_refund($me, (int)$me['seeds']);
-        fail('Could not plant there. Your seeds were refunded.', 409);
+        $message = is_array($result) ? (string)($result['message'] ?? $result['details'] ?? '') : '';
+        if (stripos($message, 'daily purchase limit') !== false) fail('You reached your daily limit of 100 items. Come back tomorrow!', 429);
+        if (stripos($message, 'not enough seeds') !== false) fail('Not enough seeds yet.', 402);
+        if (stripos($message, 'already planted') !== false) fail('That plot is already planted.', 409);
+        fail('Could not plant there. Please try again.', 409);
     }
-    json_out(['ok' => true, 'action' => 'plant', 'seeds' => $newBalance, 'slot' => $slot, 'item_id' => $itemId], 201);
+    json_out($result, 201);
 }
 
 if ($action === 'purchase') {
