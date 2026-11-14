@@ -92,8 +92,9 @@ if ($action === 'attempt') {
 if ($action !== 'complete') fail('Unknown progress action.', 422);
 if ($code === '') fail('Write your solution before checking it.', 422);
 
-/* Re-check published structural requirements before allowing a reward.
-   The in-browser interpreter still provides the detailed output feedback. */
+/* Defense-in-depth structural validation before awarding a reward.
+   The in-browser interpreter still verifies exact output; move execution to an
+   isolated server runtime for production-grade anti-cheat validation. */
 $rules = is_array($lesson['rules']) ? $lesson['rules'] : [];
 $required = $rules['mustContain'] ?? [];
 if (!is_array($required)) $required = [];
