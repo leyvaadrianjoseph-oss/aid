@@ -15,32 +15,44 @@
 </head>
 <body data-role="user">
   <div id="app-nav"></div>
-  <main class="container page-main">
+  <main class="container page-main garden-page">
     <div class="page-head page-head--garden">
-      <div><p class="chapter-kicker">YOUR LITTLE CORNER</p><h1>My garden</h1><p class="muted">Plant seeds, care for your crops and decorate your own garden.</p></div>
+      <div><p class="chapter-kicker">YOUR LITTLE CORNER</p><h1>My garden</h1><p class="muted">Grow a little, decorate a little, and make this place yours.</p></div>
       <div class="garden-seed-pocket"><span class="spr spr--sm" data-sprite="seed" aria-hidden="true"></span><strong data-bind="seeds">0</strong><span>seeds to spend</span></div>
     </div>
     <section class="garden-clock px-card" aria-live="polite">
       <div><span id="garden-time-icon" aria-hidden="true">☀️</span><strong id="garden-time-name">Daytime</strong><span id="garden-time-countdown">05:00 until night</span></div>
-      <p>Day and night change every five minutes. Your plants keep growing while you are away.</p>
+      <p>Your garden changes with the sky. Plants keep growing while you are away.</p>
     </section>
-    <div class="garden">
-      <section class="garden-field" aria-label="Garden plots">
-        <div class="garden-toolbar"><div><h2>Your plots</h2><p>12 spaces for growing plants. Select a plant to water it.</p></div><span class="plot-count">12 PLOTS</span></div>
-        <p id="garden-msg" class="hint-box garden-msg" role="status"></p>
+    <p id="garden-msg" class="hint-box garden-msg" role="status">Loading your garden...</p>
+    <div class="garden-layout">
+      <section class="garden-world" aria-label="Your garden">
+        <div class="garden-world-heading"><div><p class="chapter-kicker">THE GROWING PATCH</p><h2>Your garden</h2></div><span class="garden-live-pill"><i></i> Living garden</span></div>
         <div class="garden-landscape">
+          <div class="garden-area-label"><span>🪵 LAND PLOTS</span><small>8 soil beds</small></div>
+          <div id="land-plots" class="plots land-plots" aria-label="Land plots"></div>
+          <div class="garden-path"><span>✦</span><span>✦</span><span>✦</span></div>
+          <div class="garden-area-label water-label"><span>💧 WATER PLOTS</span><small>4 waterside beds</small></div>
+          <div id="water-plots" class="plots water-plots" aria-label="Water plots"></div>
+          <div class="garden-decor-heading"><span>FENCE LINE</span><small>Choose a fence from inventory, then tap a space</small></div>
           <div id="fence-slots" class="fence-slots" aria-label="Fence placement"></div>
-          <div class="garden-stone-path" aria-hidden="true"></div>
-          <div id="plots" class="plots"></div>
+          <div class="garden-decor-heading"><span>GARDEN DECOR</span><small>Lanterns and ponds have their own spaces</small></div>
           <div id="decor-slots" class="decor-slots" aria-label="Decoration placement"></div>
         </div>
-        <p class="garden-help">Watering can: each use speeds up a growing plant by up to 1 minute. It is reusable.</p>
+        <p class="garden-help">Tip: choose an item from your inventory to see it here, then tap a highlighted space to place it.</p>
       </section>
-      <section class="seed-shop" aria-label="Seed shop">
-        <div class="shop-heading"><p class="chapter-kicker">PICK A PRIZE</p><h2>Garden shop</h2><p>Plant seeds, buy tools, or collect decorations.</p></div>
-        <div id="shop" class="shop"></div>
-        <div class="inventory-panel px-card"><h3>Your tools &amp; decorations</h3><div id="inventory" class="inventory-list"></div></div>
-      </section>
+      <aside class="garden-side">
+        <section class="garden-inventory px-card">
+          <div class="side-heading"><div><p class="chapter-kicker">YOUR ITEMS</p><h2>Inventory</h2></div><span id="inventory-count" class="inventory-count">0</span></div>
+          <div id="selected-item" class="selected-item"><div class="selected-item-icon">✦</div><div><strong>No item selected</strong><p>Choose an item below to preview it.</p></div></div>
+          <div id="inventory" class="inventory-grid"></div>
+        </section>
+        <section class="seed-shop-panel px-card" aria-label="Garden shop">
+          <div class="side-heading"><div><p class="chapter-kicker">GARDEN MARKET</p><h2>Shop</h2></div><span class="shop-mark">✿</span></div>
+          <p class="muted shop-intro">Pick seeds to plant or buy useful garden items.</p>
+          <div id="shop" class="shop"></div>
+        </section>
+      </aside>
     </div>
   </main>
   <script src="js/api.js"></script>
