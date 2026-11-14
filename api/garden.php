@@ -84,7 +84,6 @@ if ($action === 'plant') {
 }
 
 if ($action === 'purchase') {
-    if ($kind === 'seed') fail('Seeds are planted directly into an empty plot.');
     $quantity = int_in($in, 'quantity', 1, 100, 1);
     [$code, $result] = sb_raw('POST', '/rpc/garden_purchase', [
         'p_user_id' => $me['id'],
