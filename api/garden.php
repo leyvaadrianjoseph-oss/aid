@@ -47,6 +47,23 @@ $itemId = int_in($in, 'item_id', 1, 1000000, 0);
 $item = garden_item($itemId);
 $kind = (string)$item['kind'];
 
+if ($action === 'harvest') {
+    if ($kind !== 'seed') fail('Only planted crops can be harvested.');
+    $slot = int_in($in, 'slot', 0, 11, -1);
+    [$code, $result] = sb_raw('POST', '/rpc/garden_harvest', [
+        'p_user_id' => $me['id'],
+        'p_item_id' => $itemId,
+        'p_slot' => $slot
+    ]);
+    if ($code < 200 || $code >= 300) {
+        $message = is_array($result) ? (string)($result['message'] ?? $result['details'] ?? '') : '';
+        if (stripos($message, 'not mature') !== false) fail('This plant is not ready to harvest yet.', 409);
+        if (stripos($message, 'plant not found') !== false) fail('That plant is no longer in this plot.', 404);
+        fail('Could not harvest this plant. Please reload your garden.', 409);
+    }
+    json_out($result);
+}
+
 if ($action === 'plant') {
     if (!array_key_exists('slot', $in)) fail('Pick an empty plot first.');
     if ($kind !== 'seed') fail('Choose a seed to plant.');
