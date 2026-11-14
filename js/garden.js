@@ -31,7 +31,16 @@
     for (let slot = 0; slot < 12; slot++) {
       const plot = plots[slot];
       const item = plot ? byId(plot.item_id) : null;
-      if (item && item.kind === 'seed') {
+      if (item) {
+        if (item.kind !== 'seed') {
+          const legacy = PG.el('div', 'plot is-planted plot-legacy');
+          legacy.setAttribute('role', 'img');
+          legacy.setAttribute('aria-label', 'Plot ' + (slot + 1) + ': ' + item.name + ', previously placed item');
+          legacy.appendChild(PG.spriteEl(item.sprite));
+          legacy.appendChild(PG.el('span', 'plant-details', 'Previously placed'));
+          plotsEl.appendChild(legacy);
+          continue;
+        }
         const state = growth(plot, item);
         const b = PG.el('button', 'plot is-planted plant-' + state.stage.toLowerCase());
         b.type = 'button';
