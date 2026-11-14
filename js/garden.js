@@ -102,14 +102,14 @@
 
   function renderInventory() {
     inventoryEl.textContent = '';
-    const ownedItems = items.filter((item) => item.kind !== 'seed' && owned(item.id) > 0);
+    const ownedItems = items.filter((item) => owned(item.id) > 0);
     inventoryCount.textContent = String(ownedItems.reduce((sum, item) => sum + owned(item.id), 0));
     if (!ownedItems.length) {
       inventoryEl.append(PG.el('p', 'inventory-empty', 'Your tools and decorations will appear here after you buy them.'));
       return;
     }
     ownedItems.forEach((item) => {
-      const action = item.kind === 'tool' ? 'water' : 'decor';
+      const action = item.kind === 'seed' ? 'plant' : item.kind === 'tool' ? 'water' : 'decor';
       inventoryEl.append(itemButton(item, owned(item.id), action));
     });
   }
@@ -212,13 +212,13 @@
       info.append(PG.el('strong', null, item.name));
       info.append(PG.el('small', null, item.cost_seeds + ' seeds' + (item.kind === 'seed' ? ' · ' + Math.ceil(Number(item.growth_seconds || 300) / 60) + ' min' : '')));
       card.append(info);
-      if (item.kind !== 'seed' && !isOwnedTool) {
+      if (!isOwnedTool) {
         const quantityWrap = PG.el('label', 'shop-quantity-wrap');
         quantityWrap.append(PG.el('span', null, 'Quantity'));
         const quantity = PG.el('input', 'shop-quantity');
         quantity.type = 'number';
         quantity.min = '1';
-        quantity.max = String(Math.max(1, Math.min(100, dailyLimit - dailyPurchased)));
+        quantity.max = String(item.kind === 'tool' ? 1 : Math.max(1, Math.min(100, dailyLimit - dailyPurchased)));
         quantity.value = '1';
         quantity.inputMode = 'numeric';
         quantity.setAttribute('aria-label', 'Quantity to buy for ' + item.name);
@@ -227,13 +227,12 @@
         const button = PG.el('button', 'shop-action', 'Buy');
         button.type = 'button';
         button.disabled = poor || dailyPurchased >= dailyLimit;
-        button.addEventListener('click', () => purchase(item, Math.max(1, Math.min(100, Number(quantity.value) || 1))));
+        button.addEventListener('click', () => purchase(item, Math.max(1, Math.min(item.kind === 'tool' ? 1 : 100, Number(quantity.value) || 1))));
         card.append(button);
       } else {
-        const button = PG.el('button', 'shop-action', item.kind === 'seed' ? 'Select' : 'Owned');
+        const button = PG.el('button', 'shop-action', 'Owned');
         button.type = 'button';
-        button.disabled = item.kind !== 'seed';
-        button.addEventListener('click', () => selectItem(item, 'plant'));
+        button.disabled = true;
         card.append(button);
       }
       shopEl.append(card);
