@@ -174,7 +174,7 @@
       } else {
         button.append(PG.el('span', 'decor-plus', '+'));
         button.append(PG.el('small', null, area === 'fence' ? 'Fence' : 'Decor'));
-        button.addEventListener('click', () => placeDecor(slot));
+        button.addEventListener('click', () => placeDecor(slot, area));
       }
       root.append(button);
     }
@@ -264,12 +264,16 @@
     await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'water', item_id: itemId, slot } }), item.name + ' watered. Growth boosted!');
   }
 
-  async function placeDecor(slot) {
+  async function placeDecor(slot, targetArea) {
     const item = selectedItem();
     if (!item || selectedAction !== 'decor' || item.kind !== 'decor') {
       say('Choose a decoration from your inventory first.', true); return;
     }
     const area = item.sprite === 'fence' ? 'fence' : 'decor';
+    if (targetArea !== area) {
+      say(item.sprite === 'fence' ? 'Fences can only go on the fence line.' : 'Lanterns and ponds go in the garden decor spaces.', true);
+      return;
+    }
     await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'place_decor', item_id: item.id, slot } }), item.name + ' placed in your garden.');
   }
 
