@@ -49,6 +49,8 @@ if ($method === 'GET') {
         $activity[$day] = ($activity[$day] ?? 0) + 1;
     }
 
+    $xpHistory = sb('GET', '/xp_history?user_id=eq.' . $uid . '&select=amount,source,source_id,created_at&order=created_at.desc&limit=30');
+
     $calendar = [];
     $today = new DateTimeImmutable('today', $tz);
     for ($i = 34; $i >= 0; $i--) {
@@ -60,7 +62,7 @@ if ($method === 'GET') {
         'xp' => (int)$me['xp'], 'seeds' => (int)$me['seeds'], 'streak' => (int)$me['streak'],
         'lessons_done' => $doneCount, 'lessons_total' => count($list),
         'mastery' => $mastery, 'achievements' => $achievements,
-        'activity' => $calendar, 'attempts_total' => $attemptsTotal,
+        'activity' => $calendar, 'attempts_total' => $attemptsTotal, 'xp_history' => $xpHistory,
     ]);
 }
 
