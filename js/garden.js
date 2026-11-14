@@ -187,6 +187,8 @@
 
   function renderShop() {
     shopEl.textContent = '';
+    const dailyStatus = PG.el('p', 'daily-shop-limit', 'Daily purchases: ' + dailyPurchased + ' / ' + dailyLimit + ' items · ' + Math.max(0, dailyLimit - dailyPurchased) + ' remaining');
+    shopEl.append(dailyStatus);
     items.forEach((item) => {
       const isOwnedTool = item.kind === 'tool' && owned(item.id) > 0;
       const poor = seeds < Number(item.cost_seeds);
