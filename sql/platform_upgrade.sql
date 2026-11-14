@@ -1,5 +1,47 @@
 -- Python Garden platform upgrade.
--- Additive only: preserves existing accounts, lessons, XP, seeds, progress and garden data.
+-- Run after sql/schema.sql and sql/seed.sql. This migration is additive.
+
+alter table shop_items add column if not exists growth_seconds integer not null default 300;
+alter table garden_plots
+  add column if not exists growth_bonus_seconds integer not null default 0,
+  add column if not exists last_watered_at timestamptz;
+
+create table if not exists garden_inventory (
+  id bigserial primary key,
+  user_id uuid not null references profiles(id) on delete cascade,
+  item_id integer not null references shop_items(id) on delete cascade,
+  quantity integer not null default 0 check (quantity >= 0),
+  unique (user_id, item_id)
+);
+
+create table if not exists garden_decor (
+  id bigserial primary key,
+  user_id uuid not null references profiles(id) on delete cascade,
+  area text not null check (area in ('fence','decor')),
+  slot integer not null,
+  item_id integer not null references shop_items(id),
+  placed_at timestamptz not null default now(),
+  unique (user_id, area, slot),
+  check ((area = 'fence' and slot between 0 and 7) or (area = 'decor' and slot between 0 and 3))
+);
+
+create table if not exists garden_daily_purchases (
+  user_id uuid not null references profiles(id) on delete cascade,
+  purchase_date date not null,
+  quantity integer not null default 0 check (quantity between 0 and 100),
+  primary key (user_id, purchase_date)
+);
+
+alter table garden_inventory enable row level security;
+alter table garden_decor enable row level security;
+alter table garden_daily_purchases enable row level security;
+
+alter table toolbox_topics
+  add column if not exists category text not null default 'Basics',
+  add column if not exists difficulty text not null default 'Beginner',
+  add column if not exists tags jsonb not null default '[]'::jsonb,
+  add column if not exists syntax text,
+  add column if not exists common_errors jsonb not null default '[]'::jsonb;
 
 alter table toolbox_topics
   add column if not exists category text not null default 'Basics',
