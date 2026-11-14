@@ -36,12 +36,46 @@ alter table garden_inventory enable row level security;
 alter table garden_decor enable row level security;
 alter table garden_daily_purchases enable row level security;
 
-alter table toolbox_topics
-  add column if not exists category text not null default 'Basics',
-  add column if not exists difficulty text not null default 'Beginner',
-  add column if not exists tags jsonb not null default '[]'::jsonb,
-  add column if not exists syntax text,
-  add column if not exists common_errors jsonb not null default '[]'::jsonb;
+-- Move legacy tools and decorations out of plant beds without duplicating
+-- rows already migrated by sql/garden_upgrade.sql.
+insert into garden_inventory(user_id, item_id, quantity)
+select gp.user_id, gp.item_id, count(*)::integer
+from garden_plots gp
+join shop_items si on si.id = gp.item_id
+where si.kind = 'tool'
+group by gp.user_id, gp.item_id
+on conflict (user_id, item_id)
+do update set quantity = garden_inventory.quantity + excluded.quantity;
+
+delete from garden_plots gp
+using shop_items si
+where si.id = gp.item_id and si.kind = 'tool';
+
+insert into garden_decor(user_id, area, slot, item_id)
+select gp.user_id,
+       case when si.sprite = 'fence' then 'fence' else 'decor' end,
+       gp.slot,
+       gp.item_id
+from garden_plots gp
+join shop_items si on si.id = gp.item_id
+where si.kind = 'decor'
+  and ((si.sprite = 'fence' and gp.slot between 0 and 7)
+    or (si.sprite <> 'fence' and gp.slot between 0 and 3))
+on conflict (user_id, area, slot) do nothing;
+
+delete from garden_plots gp
+using shop_items si
+where si.id = gp.item_id
+  and si.kind = 'decor'
+  and ((si.sprite = 'fence' and gp.slot between 0 and 7)
+    or (si.sprite <> 'fence' and gp.slot between 0 and 3))
+  and exists (
+    select 1 from garden_decor gd
+    where gd.user_id = gp.user_id
+      and gd.item_id = gp.item_id
+      and gd.slot = gp.slot
+      and gd.area = case when si.sprite = 'fence' then 'fence' else 'decor' end
+  );
 
 alter table toolbox_topics
   add column if not exists category text not null default 'Basics',
