@@ -11,13 +11,13 @@ insert into lessons (chapter_id, title, concept, goals, starter_code, expected_o
 pots = 3
 # Print how many seeds you need in total
 ', '18', '{"mustContain": ["*", "print("], "hint": "You can put a calculation inside print: print(a * b)"}'::jsonb, 15, 40, 3);
-insert into lessons (chapter_id, title, concept, goals, starter_code, expected_output, rules, reward_seeds, reward_xp, sort_order) values ((select id from chapters where slug='first-sprouts'), 'Sunny or not', 'Decisions', '["Write an if that checks sun > 5", "Add an else for the other case", "Print Grow! when the sun is bright"]'::jsonb, 'sun = 8
-# If sun is above 5, print Grow! Otherwise print Wait
-', 'Grow!', '{"mustContain": ["if", "else", "print("], "hint": "End the if line with a colon and indent the next line by 4 spaces."}'::jsonb, 15, 40, 4);
-insert into lessons (chapter_id, title, concept, goals, starter_code, expected_output, rules, reward_seeds, reward_xp, sort_order) values ((select id from chapters where slug='first-sprouts'), 'Water every plant', 'Loops', '["Use a for loop with range(3)", "Print Water plant 1, Water plant 2 and Water plant 3"]'::jsonb, '# Water 3 plants, one line each
+insert into lessons (chapter_id, title, concept, goals, starter_code, expected_output, rules, reward_seeds, reward_xp, sort_order) values ((select id from chapters where slug='first-sprouts'), 'Sunny or not', 'Decisions', '["Use an if statement to check whether sun > 5", "Print Grow! when the condition is true", "Use else to print Wait when the condition is false"]'::jsonb, 'sun = 8
+# Check whether the sun is bright enough for the plants
+', 'Grow!', '{"mustContain": ["if sun > 5:", "else:", "print(\"Grow!\")", "print(\"Wait\")"], "hint": "Write if sun > 5: and indent its print() line by 4 spaces. Add else: on its own line, then indent print(\"Wait\") by 4 spaces."}'::jsonb, 15, 40, 4);
+insert into lessons (chapter_id, title, concept, goals, starter_code, expected_output, rules, reward_seeds, reward_xp, sort_order) values ((select id from chapters where slug='first-sprouts'), 'Water every plant', 'Loops', '["Write a for loop that uses range(3)", "Use the loop variable to number the plants starting at 1", "Print Water plant 1, Water plant 2 and Water plant 3 on separate lines"]'::jsonb, '# Use a for loop to water 3 plants, one line at a time
 ', 'Water plant 1
 Water plant 2
-Water plant 3', '{"mustContain": ["for", "range"], "hint": "range(3) counts 0, 1, 2. Print i + 1 to start at 1."}'::jsonb, 15, 40, 5);
+Water plant 3', '{"mustContain": ["for i in range(3):", "print(\"Water plant\", i + 1)"], "hint": "Write for i in range(3): and indent the loop body by 4 spaces. Use i + 1 when printing so the plant numbers start at 1."}'::jsonb, 15, 40, 5);
 
 insert into shop_items (name, kind, cost_seeds, sprite) values ('Sunflower seed', 'seed', 20, 'sunflower');
 insert into shop_items (name, kind, cost_seeds, sprite) values ('Tulip bulb', 'seed', 30, 'tulip');

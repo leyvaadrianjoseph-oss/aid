@@ -71,19 +71,20 @@
           "concept": "Decisions",
           "sort_order": 4,
           "goals": [
-            "Write an if that checks sun > 5",
-            "Add an else for the other case",
-            "Print Grow! when the sun is bright"
+            "Use an if statement to check whether sun > 5",
+            "Print Grow! when the condition is true",
+            "Use else to print Wait when the condition is false"
           ],
-          "starter_code": "sun = 8\n# If sun is above 5, print Grow! Otherwise print Wait\n",
+          "starter_code": "sun = 8\n# Check whether the sun is bright enough for the plants\n",
           "expected_output": "Grow!",
           "rules": {
             "mustContain": [
-              "if",
-              "else",
-              "print("
+              "if sun > 5:",
+              "else:",
+              "print(\"Grow!\")",
+              "print(\"Wait\")"
             ],
-            "hint": "End the if line with a colon and indent the next line by 4 spaces."
+            "hint": "Write if sun > 5: and indent its print() line by 4 spaces. Add else: on its own line, then indent print(\"Wait\") by 4 spaces."
           },
           "reward_seeds": 15,
           "reward_xp": 40
@@ -93,17 +94,18 @@
           "concept": "Loops",
           "sort_order": 5,
           "goals": [
-            "Use a for loop with range(3)",
-            "Print Water plant 1, Water plant 2 and Water plant 3"
+            "Write a for loop that uses range(3)",
+            "Use the loop variable to number the plants starting at 1",
+            "Print Water plant 1, Water plant 2 and Water plant 3 on separate lines"
           ],
-          "starter_code": "# Water 3 plants, one line each\n",
+          "starter_code": "# Use a for loop to water 3 plants, one line at a time\n",
           "expected_output": "Water plant 1\nWater plant 2\nWater plant 3",
           "rules": {
             "mustContain": [
-              "for",
-              "range"
+              "for i in range(3):",
+              "print(\"Water plant\", i + 1)"
             ],
-            "hint": "range(3) counts 0, 1, 2. Print i + 1 to start at 1."
+            "hint": "Write for i in range(3): and indent the loop body by 4 spaces. Use i + 1 when printing so the plant numbers start at 1."
           },
           "reward_seeds": 15,
           "reward_xp": 40
