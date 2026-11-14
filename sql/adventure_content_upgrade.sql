@@ -120,3 +120,30 @@ where not exists (
   select 1 from lessons l
   where l.chapter_id=c.id and lower(l.title)=lower(d.title)
 );
+
+
+-- Tie the new Toolbox references to the Adventure lessons that introduce them.
+update toolbox_topics set unlock_lesson_id = (
+  select l.id from lessons l join chapters c on c.id=l.chapter_id
+  where c.slug='text-and-lists' and l.title='Polish the plant label' order by l.id desc limit 1
+) where title='Strings';
+update toolbox_topics set unlock_lesson_id = (
+  select l.id from lessons l join chapters c on c.id=l.chapter_id
+  where c.slug='text-and-lists' and l.title='Choose a sunny day' order by l.id desc limit 1
+) where title='Booleans';
+update toolbox_topics set unlock_lesson_id = (
+  select l.id from lessons l join chapters c on c.id=l.chapter_id
+  where c.slug='text-and-lists' and l.title='Compare the water level' order by l.id desc limit 1
+) where title='Comparisons';
+update toolbox_topics set unlock_lesson_id = (
+  select l.id from lessons l join chapters c on c.id=l.chapter_id
+  where c.slug='loops-and-patterns' and l.title='Drain the watering can' order by l.id desc limit 1
+) where title='while loops';
+update toolbox_topics set unlock_lesson_id = (
+  select l.id from lessons l join chapters c on c.id=l.chapter_id
+  where c.slug='text-and-lists' and l.title='Make a plant collection' order by l.id desc limit 1
+) where title='Lists';
+update toolbox_topics set unlock_lesson_id = (
+  select l.id from lessons l join chapters c on c.id=l.chapter_id
+  where c.slug='loops-and-patterns' and l.title='Add a new seed' order by l.id desc limit 1
+) where title='List methods';
