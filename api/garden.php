@@ -36,11 +36,9 @@ function garden_inventory_add(string $userId, int $itemId, int $amount): void {
 }
 
 if ($method === 'GET') {
-    $items = sb('GET', '/shop_items?is_active=eq.true&order=cost_seeds.asc&select=id,name,kind,cost_seeds,sprite,growth_seconds');
-    $plots = sb('GET', '/garden_plots?user_id=eq.' . $uid . '&select=id,slot,item_id,planted_at,growth_bonus_seconds');
-    $inventory = sb('GET', '/garden_inventory?user_id=eq.' . $uid . '&select=item_id,quantity');
-    $decor = sb('GET', '/garden_decor?user_id=eq.' . $uid . '&select=id,area,slot,item_id');
-    json_out(['items' => $items, 'plots' => $plots, 'inventory' => $inventory, 'decor' => $decor, 'seeds' => (int)$me['seeds']]);
+    [$code, $data] = sb_raw('POST', '/rpc/garden_load', ['p_user_id' => $me['id']]);
+    if ($code < 200 || $code >= 300 || !is_array($data)) fail('Could not load your garden data', 500);
+    json_out($data);
 }
 
 $in = read_json();
@@ -65,16 +63,22 @@ if ($action === 'plant') {
 
 if ($action === 'purchase') {
     if ($kind === 'seed') fail('Seeds are planted directly into an empty plot.');
-    $owned = sb('GET', '/garden_inventory?user_id=eq.' . $uid . '&item_id=eq.' . $itemId . '&select=quantity');
-    if ($kind === 'tool' && $owned && (int)$owned[0]['quantity'] > 0) fail('You already own this tool.');
-    $newBalance = garden_spend($me, (int)$item['cost_seeds']);
-    try {
-        garden_inventory_add((string)$me['id'], $itemId, 1);
-    } catch (Throwable $e) {
-        garden_refund($me, (int)$me['seeds']);
-        throw $e;
+    $quantity = int_in($in, 'quantity', 1, 100, 1);
+    [$code, $result] = sb_raw('POST', '/rpc/garden_purchase', [
+        'p_user_id' => $me['id'],
+        'p_item_id' => $itemId,
+        'p_quantity' => $quantity
+    ]);
+    if ($code < 200 || $code >= 300) {
+        $message = is_array($result) ? (string)($result['message'] ?? $result['details'] ?? '') : '';
+        if (stripos($message, 'daily purchase limit') !== false) fail('You reached your daily limit of 100 items. Come back tomorrow!', 429);
+        if (stripos($message, 'not enough seeds') !== false) fail('Not enough seeds yet.', 402);
+        if (stripos($message, 'already own this tool') !== false) fail('You already own this tool.', 409);
+        if (stripos($message, 'not available') !== false) fail('That item is not available.', 404);
+        fail('Could not complete this purchase. Please try again.', 409);
     }
-    json_out(['ok' => true, 'action' => 'purchase', 'seeds' => $newBalance, 'item_id' => $itemId], 201);
+    if (!is_array($result)) fail('Purchase completed, but the response was invalid. Reload your garden.', 500);
+    json_out($result, 201);
 }
 
 if ($action === 'water') {
