@@ -130,7 +130,7 @@
   PG.ready.then((me) => {
     if (!me) return;
     if (!lessonId) { location.replace('/adventure.html'); return; }
-    PG.api('/api/lessons.php?id=' + lessonId).then(fill).catch((err) => {
+    PG.api('/api/lessons.php?id=' + lessonId).then((data) => fill(data.lesson)).catch((err) => {
       if (err.status === 403 || err.status === 404) {
         PG.toast(err.message, true);
         setTimeout(() => location.replace('/adventure.html'), 900);
