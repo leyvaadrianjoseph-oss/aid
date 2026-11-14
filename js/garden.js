@@ -173,7 +173,9 @@
       if (item) {
         button.append(PG.spriteEl(item.sprite, 'decor-sprite'));
         button.append(PG.el('small', 'decor-name', item.name));
-        button.setAttribute('aria-label', item.name + ' placed');
+        button.setAttribute('aria-label', item.name + ' placed. Select to pick it up.');
+        button.title = 'Click to return this item to inventory';
+        button.addEventListener('click', () => pickupDecor(slot, area, Number(item.id)));
       } else {
         button.append(PG.el('span', 'decor-plus', '+'));
         button.append(PG.el('small', null, area === 'fence' ? 'Fence' : 'Decor'));
@@ -186,6 +188,15 @@
   function renderDecor() {
     renderDecorArea('fence', fenceEl, 8);
     renderDecorArea('decor', decorEl, 4);
+  }
+
+  async function pickupDecor(slot, area, itemId) {
+    const item = byId(itemId);
+    if (!item || busy) return;
+    await runAction(() => PG.api('/api/garden.php', {
+      method: 'POST',
+      body: { action: 'pickup_decor', item_id: itemId, area, slot }
+    }), item.name + ' returned to your inventory.');
   }
 
   function renderShop() {
@@ -256,7 +267,13 @@
     busy = true;
     document.body.classList.add('garden-busy');
     try {
-      await task();
+      const result = await task();
+      if (result && (result.seeds !== undefined || result.xp !== undefined)) {
+        const stats = {};
+        if (result.seeds !== undefined) stats.seeds = result.seeds;
+        if (result.xp !== undefined) stats.xp = result.xp;
+        PG.setStats(stats);
+      }
       await reloadGarden();
       say(successMessage);
       PG.toast(successMessage);
