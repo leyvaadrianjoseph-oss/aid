@@ -236,3 +236,5 @@
 .shop-quantity-wrap{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;font-size:.78rem;color:var(--muted,#667085)}
 .shop-quantity{width:76px;min-height:36px;padding:6px 9px;border:1px solid var(--line,#d9e2d8);border-radius:9px;background:var(--surface,#fff);color:var(--text,#243326);font:inherit;font-weight:800;text-align:center}
 .shop-quantity:focus{outline:2px solid var(--accent,#5b8c55);outline-offset:2px}
+
+.daily-shop-limit{margin:0 0 12px;padding:9px 11px;border:1px solid var(--line,#d9e2d8);border-radius:10px;background:var(--surface-soft,#f4f7f1);font-size:.82rem;font-weight:800;color:var(--text,#243326)}
