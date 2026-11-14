@@ -20,6 +20,24 @@
     $('activity-total').textContent = total + ' lesson completions in the last 35 days';
   }
 
+  function renderXpHistory(rows) {
+    const host = $('xp-history');
+    host.textContent = '';
+    (rows || []).forEach((entry) => {
+      const item = PG.el('li', 'xp-history-item');
+      const source = entry.source === 'lesson'
+        ? 'Adventure lesson ' + entry.source_id
+        : entry.source === 'garden_harvest' ? 'Garden harvest' : 'Garden reward';
+      const detail = PG.el('div');
+      detail.appendChild(PG.el('strong', null, source));
+      detail.appendChild(PG.el('small', 'muted', new Date(entry.created_at).toLocaleString()));
+      item.appendChild(detail);
+      item.appendChild(PG.el('strong', 'xp-history-amount', '+' + entry.amount + ' XP'));
+      host.appendChild(item);
+    });
+    if (!rows || !rows.length) host.appendChild(PG.el('li', 'muted', 'Your XP rewards will appear here.'));
+  }
+
   function render(d) {
     PG.setStats({ seeds: d.seeds, xp: d.xp, streak: d.streak });
     const r = PG.rankFor(d.xp);
@@ -38,6 +56,7 @@
     $('stat-seeds').textContent = d.seeds;
     $('stat-attempts').textContent = d.attempts_total || 0;
     renderActivity(d.activity);
+    renderXpHistory(d.xp_history);
 
     const m = $('mastery');
     m.textContent = '';
