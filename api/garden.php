@@ -4,32 +4,118 @@ $method = method_is('GET', 'POST');
 $me = require_user();
 $uid = q($me['id']);
 
+function garden_item(int $id): array {
+    $rows = sb('GET', '/shop_items?id=eq.' . $id . '&is_active=eq.true&select=*');
+    if (!$rows) fail('That item is not available', 404);
+    return $rows[0];
+}
+
+function garden_spend(array $me, int $cost): int {
+    $balance = (int)$me['seeds'];
+    if ($balance < $cost) fail('Not enough seeds yet', 402);
+    $paid = sb('PATCH', '/profiles?id=eq.' . q((string)$me['id']) . '&seeds=eq.' . $balance, ['seeds' => $balance - $cost]);
+    if (!$paid) fail('Your seed balance changed. Try again.', 409);
+    return $balance - $cost;
+}
+
+function garden_refund(array $me, int $balance): void {
+    sb('PATCH', '/profiles?id=eq.' . q((string)$me['id']), ['seeds' => $balance]);
+}
+
+function garden_inventory_add(string $userId, int $itemId, int $amount): void {
+    $uid = q($userId);
+    $rows = sb('GET', '/garden_inventory?user_id=eq.' . $uid . '&item_id=eq.' . $itemId . '&select=id,quantity');
+    if ($rows) {
+        $old = (int)$rows[0]['quantity'];
+        $updated = sb('PATCH', '/garden_inventory?id=eq.' . (int)$rows[0]['id'] . '&quantity=eq.' . $old, ['quantity' => $old + $amount]);
+        if (!$updated) fail('Inventory changed. Please try again.', 409);
+    } else {
+        [$code] = sb_raw('POST', '/garden_inventory', ['user_id' => $userId, 'item_id' => $itemId, 'quantity' => $amount]);
+        if ($code < 200 || $code >= 300) fail('Could not add the item to your inventory', 409);
+    }
+}
+
 if ($method === 'GET') {
-    $items = sb('GET', '/shop_items?is_active=eq.true&order=cost_seeds.asc&select=id,name,kind,cost_seeds,sprite');
-    $plots = sb('GET', "/garden_plots?user_id=eq.$uid&select=slot,item_id");
-    json_out(['items' => $items, 'plots' => $plots, 'seeds' => (int)$me['seeds']]);
+    $items = sb('GET', '/shop_items?is_active=eq.true&order=cost_seeds.asc&select=id,name,kind,cost_seeds,sprite,growth_seconds');
+    $plots = sb('GET', '/garden_plots?user_id=eq.' . $uid . '&select=id,slot,item_id,planted_at,growth_bonus_seconds');
+    $inventory = sb('GET', '/garden_inventory?user_id=eq.' . $uid . '&select=item_id,quantity');
+    $decor = sb('GET', '/garden_decor?user_id=eq.' . $uid . '&select=id,area,slot,item_id');
+    json_out(['items' => $items, 'plots' => $plots, 'inventory' => $inventory, 'decor' => $decor, 'seeds' => (int)$me['seeds']]);
 }
 
 $in = read_json();
-$itemId = (int)($in['item_id'] ?? 0);
-$slot = filter_var($in['slot'] ?? null, FILTER_VALIDATE_INT);
-if ($slot === false || $slot < 0 || $slot > 11) fail('Pick a plot from 1 to 12');
+$action = (string)($in['action'] ?? 'plant');
+$itemId = int_in($in, 'item_id', 1, 1000000, 0);
+$item = garden_item($itemId);
+$kind = (string)$item['kind'];
 
-$item = sb('GET', "/shop_items?id=eq.$itemId&is_active=eq.true&select=*");
-if (!$item) fail('That item is not for sale', 404);
-$cost = (int)$item[0]['cost_seeds'];
-$balance = (int)$me['seeds'];
-if ($balance < $cost) fail('Not enough seeds yet', 402);
-if (sb('GET', "/garden_plots?user_id=eq.$uid&slot=eq.$slot&select=id")) fail('That plot is already planted', 409);
-
-/* spend seeds first, guarded by the old balance so two requests cannot both pay */
-$paid = sb('PATCH', "/profiles?id=eq.$uid&seeds=eq.$balance", ['seeds' => $balance - $cost]);
-if (!$paid) fail('Your balance changed. Try again.', 409);
-
-[$code] = sb_raw('POST', '/garden_plots', ['user_id' => $me['id'], 'slot' => $slot, 'item_id' => $itemId]);
-if ($code < 200 || $code >= 300) {
-    sb('PATCH', "/profiles?id=eq.$uid", ['seeds' => $balance]); // refund
-    fail('That plot is already planted', 409);
+if ($action === 'plant') {
+    if ($kind !== 'seed') fail('Choose a seed to plant.');
+    $slot = int_in($in, 'slot', 0, 11, -1);
+    if (sb('GET', '/garden_plots?user_id=eq.' . $uid . '&slot=eq.' . $slot . '&select=id')) fail('That plot is already planted', 409);
+    $newBalance = garden_spend($me, (int)$item['cost_seeds']);
+    [$code] = sb_raw('POST', '/garden_plots', ['user_id' => $me['id'], 'slot' => $slot, 'item_id' => $itemId]);
+    if ($code < 200 || $code >= 300) {
+        garden_refund($me, (int)$me['seeds']);
+        fail('Could not plant there. Your seeds were refunded.', 409);
+    }
+    json_out(['ok' => true, 'action' => 'plant', 'seeds' => $newBalance, 'slot' => $slot, 'item_id' => $itemId], 201);
 }
-json_out(['ok' => true, 'seeds' => $balance - $cost, 'slot' => $slot, 'item_id' => $itemId], 201);
+
+if ($action === 'purchase') {
+    if ($kind === 'seed') fail('Seeds are planted directly into an empty plot.');
+    $owned = sb('GET', '/garden_inventory?user_id=eq.' . $uid . '&item_id=eq.' . $itemId . '&select=quantity');
+    if ($kind === 'tool' && $owned && (int)$owned[0]['quantity'] > 0) fail('You already own this tool.');
+    $newBalance = garden_spend($me, (int)$item['cost_seeds']);
+    try {
+        garden_inventory_add((string)$me['id'], $itemId, 1);
+    } catch (Throwable $e) {
+        garden_refund($me, (int)$me['seeds']);
+        throw $e;
+    }
+    json_out(['ok' => true, 'action' => 'purchase', 'seeds' => $newBalance, 'item_id' => $itemId], 201);
+}
+
+if ($action === 'water') {
+    if ($kind !== 'seed') fail('Only planted crops can be watered.');
+    $tool = sb('GET', '/shop_items?is_active=eq.true&sprite=eq.can&select=id');
+    if (!$tool) fail('Watering can is unavailable.');
+    $toolId = (int)$tool[0]['id'];
+    $owned = sb('GET', '/garden_inventory?user_id=eq.' . $uid . '&item_id=eq.' . $toolId . '&select=quantity');
+    if (!$owned || (int)$owned[0]['quantity'] < 1) fail('Buy a watering can from the shop first.');
+    $slot = int_in($in, 'slot', 0, 11, -1);
+    $rows = sb('GET', '/garden_plots?user_id=eq.' . $uid . '&slot=eq.' . $slot . '&select=id,item_id,planted_at,growth_bonus_seconds');
+    if (!$rows || (int)$rows[0]['item_id'] !== $itemId) fail('That plant is not in this plot.', 404);
+    $plot = $rows[0];
+    $elapsed = max(0, time() - strtotime((string)$plot['planted_at']));
+    $duration = max(60, (int)$item['growth_seconds']);
+    $bonus = (int)$plot['growth_bonus_seconds'];
+    $remaining = $duration - $elapsed - $bonus;
+    if ($remaining <= 0) fail('This plant is already fully grown.');
+    $boost = min(60, max(0, $remaining - 1));
+    $updated = sb('PATCH', '/garden_plots?id=eq.' . (int)$plot['id'] . '&growth_bonus_seconds=eq.' . $bonus, ['growth_bonus_seconds' => $bonus + $boost]);
+    if (!$updated) fail('The plant changed. Try watering again.', 409);
+    json_out(['ok' => true, 'action' => 'water', 'boost_seconds' => $boost]);
+}
+
+if ($action === 'place_decor') {
+    if ($kind !== 'decor') fail('Choose a decoration.');
+    $area = $item['sprite'] === 'fence' ? 'fence' : 'decor';
+    $slot = int_in($in, 'slot', 0, $area === 'fence' ? 7 : 3, -1);
+    if (sb('GET', '/garden_decor?user_id=eq.' . $uid . '&area=eq.' . $area . '&slot=eq.' . $slot . '&select=id')) fail('That decoration space is occupied.', 409);
+    $owned = sb('GET', '/garden_inventory?user_id=eq.' . $uid . '&item_id=eq.' . $itemId . '&select=id,quantity');
+    if (!$owned || (int)$owned[0]['quantity'] < 1) fail('Buy this decoration first.');
+    $inventoryId = (int)$owned[0]['id'];
+    $quantity = (int)$owned[0]['quantity'];
+    $updated = sb('PATCH', '/garden_inventory?id=eq.' . $inventoryId . '&quantity=eq.' . $quantity, ['quantity' => $quantity - 1]);
+    if (!$updated) fail('Inventory changed. Try again.', 409);
+    [$code] = sb_raw('POST', '/garden_decor', ['user_id' => $me['id'], 'area' => $area, 'slot' => $slot, 'item_id' => $itemId]);
+    if ($code < 200 || $code >= 300) {
+        sb('PATCH', '/garden_inventory?id=eq.' . $inventoryId, ['quantity' => $quantity]);
+        fail('Could not place the decoration. Item returned to inventory.', 409);
+    }
+    json_out(['ok' => true, 'action' => 'place_decor', 'area' => $area, 'slot' => $slot, 'item_id' => $itemId], 201);
+}
+
+fail('Unknown garden action.', 422);
 ?>
