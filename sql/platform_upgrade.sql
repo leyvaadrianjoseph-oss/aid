@@ -181,3 +181,146 @@ $$;
 
 revoke all on function garden_pickup_decor(uuid, integer, text, integer) from public, anon, authenticated;
 grant execute on function garden_pickup_decor(uuid, integer, text, integer) to service_role;
+
+
+-- Seed stock is purchased into inventory in batches, then consumed when planted.
+create or replace function garden_purchase(
+  p_user_id uuid,
+  p_item_id integer,
+  p_quantity integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_balance integer;
+  v_cost integer;
+  v_kind text;
+  v_active boolean;
+  v_owned integer;
+  v_today date := (now() at time zone 'Asia/Manila')::date;
+  v_used integer;
+  v_total_cost bigint;
+  v_new_balance integer;
+  v_new_quantity integer;
+begin
+  if p_quantity is null or p_quantity < 1 or p_quantity > 100 then
+    raise exception 'Quantity must be between 1 and 100';
+  end if;
+
+  select seeds into v_balance
+  from profiles where id = p_user_id for update;
+  if not found then raise exception 'Player profile not found'; end if;
+
+  select cost_seeds, kind, is_active
+  into v_cost, v_kind, v_active
+  from shop_items where id = p_item_id;
+  if not found or v_active is distinct from true or v_kind is null then
+    raise exception 'Item not available';
+  end if;
+
+  if v_kind = 'tool' then
+    if p_quantity <> 1 then raise exception 'Tools can only be purchased one at a time'; end if;
+    select quantity into v_owned from garden_inventory
+    where user_id = p_user_id and item_id = p_item_id;
+    if coalesce(v_owned, 0) > 0 then raise exception 'Already own this tool'; end if;
+  end if;
+
+  insert into garden_daily_purchases(user_id, purchase_date, quantity)
+  values (p_user_id, v_today, 0)
+  on conflict (user_id, purchase_date) do nothing;
+
+  select quantity into v_used
+  from garden_daily_purchases
+  where user_id = p_user_id and purchase_date = v_today
+  for update;
+  if v_used + p_quantity > 100 then raise exception 'Daily purchase limit reached'; end if;
+
+  v_total_cost := v_cost::bigint * p_quantity;
+  if v_balance < v_total_cost then raise exception 'Not enough seeds'; end if;
+  v_new_balance := v_balance - v_total_cost;
+
+  update profiles set seeds = v_new_balance where id = p_user_id;
+
+  insert into garden_inventory(user_id, item_id, quantity)
+  values (p_user_id, p_item_id, p_quantity)
+  on conflict (user_id, item_id)
+  do update set quantity = garden_inventory.quantity + excluded.quantity
+  returning quantity into v_new_quantity;
+
+  update garden_daily_purchases
+  set quantity = quantity + p_quantity
+  where user_id = p_user_id and purchase_date = v_today;
+
+  return jsonb_build_object(
+    'ok', true, 'action', 'purchase', 'item_id', p_item_id,
+    'quantity', p_quantity, 'inventory_quantity', v_new_quantity,
+    'seeds', v_new_balance, 'daily_purchased', v_used + p_quantity,
+    'daily_limit', 100
+  );
+end;
+$$;
+
+create or replace function garden_plant(
+  p_user_id uuid,
+  p_item_id integer,
+  p_slot integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_kind text;
+  v_active boolean;
+  v_quantity integer;
+  v_remaining integer;
+  v_balance integer;
+begin
+  if p_slot is null or p_slot < 0 or p_slot > 11 then
+    raise exception 'Invalid plot';
+  end if;
+
+  select kind, is_active into v_kind, v_active
+  from shop_items where id = p_item_id;
+  if not found or v_active is distinct from true or v_kind <> 'seed' then
+    raise exception 'Seed item not available';
+  end if;
+
+  if exists (select 1 from garden_plots where user_id = p_user_id and slot = p_slot) then
+    raise exception 'Plot already planted';
+  end if;
+
+  select quantity into v_quantity
+  from garden_inventory
+  where user_id = p_user_id and item_id = p_item_id
+  for update;
+  if not found or coalesce(v_quantity, 0) < 1 then
+    raise exception 'No seeds of this type in inventory';
+  end if;
+
+  insert into garden_plots(user_id, slot, item_id)
+  values (p_user_id, p_slot, p_item_id);
+
+  update garden_inventory
+  set quantity = quantity - 1
+  where user_id = p_user_id and item_id = p_item_id and quantity = v_quantity
+  returning quantity into v_remaining;
+  if not found then raise exception 'Inventory changed. Try again'; end if;
+
+  select seeds into v_balance from profiles where id = p_user_id;
+  return jsonb_build_object(
+    'ok', true, 'action', 'plant', 'item_id', p_item_id,
+    'slot', p_slot, 'inventory_quantity', v_remaining,
+    'seeds', coalesce(v_balance, 0)
+  );
+end;
+$$;
+
+revoke all on function garden_purchase(uuid, integer, integer) from public, anon, authenticated;
+revoke all on function garden_plant(uuid, integer, integer) from public, anon, authenticated;
+grant execute on function garden_purchase(uuid, integer, integer) to service_role;
+grant execute on function garden_plant(uuid, integer, integer) to service_role;
