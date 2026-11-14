@@ -324,3 +324,96 @@ revoke all on function garden_purchase(uuid, integer, integer) from public, anon
 revoke all on function garden_plant(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function garden_purchase(uuid, integer, integer) to service_role;
 grant execute on function garden_plant(uuid, integer, integer) to service_role;
+
+
+-- Record every Check click, including unsuccessful attempts.
+create or replace function record_lesson_attempt(
+  p_user_id uuid, p_lesson_id integer, p_code text
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_attempts integer;
+begin
+  insert into user_progress(user_id, lesson_id, status, best_code, attempts)
+  values (p_user_id, p_lesson_id, 'open', left(coalesce(p_code, ''), 5000), 1)
+  on conflict (user_id, lesson_id)
+  do update set
+    attempts = user_progress.attempts + 1,
+    best_code = case when user_progress.status = 'done'
+      then user_progress.best_code else excluded.best_code end
+  returning attempts into v_attempts;
+  return jsonb_build_object('ok', true, 'attempts', v_attempts);
+end;
+$$;
+
+-- Completion and rewards are one transaction and can only be awarded once.
+create or replace function complete_lesson(
+  p_user_id uuid, p_lesson_id integer, p_code text,
+  p_reward_seeds integer, p_reward_xp integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_status text;
+  v_seeds integer;
+  v_xp integer;
+  v_old_streak integer;
+  v_streak integer;
+  v_last timestamptz;
+  v_last_day date;
+  v_today date := (now() at time zone 'Asia/Manila')::date;
+begin
+  if p_reward_seeds < 0 or p_reward_xp < 0 then raise exception 'Invalid lesson reward'; end if;
+
+  select seeds, xp, streak into v_seeds, v_xp, v_old_streak
+  from profiles where id = p_user_id for update;
+  if not found then raise exception 'Player profile not found'; end if;
+
+  select status into v_status from user_progress
+  where user_id = p_user_id and lesson_id = p_lesson_id for update;
+
+  if v_status = 'done' then
+    update user_progress set best_code = left(coalesce(p_code, ''), 5000)
+    where user_id = p_user_id and lesson_id = p_lesson_id;
+    return jsonb_build_object('awarded', false, 'seeds', v_seeds, 'xp', v_xp, 'streak', v_old_streak);
+  end if;
+
+  select max(completed_at) into v_last from user_progress
+  where user_id = p_user_id and status = 'done' and completed_at is not null;
+
+  if v_last is null then
+    v_streak := 1;
+  else
+    v_last_day := (v_last at time zone 'Asia/Manila')::date;
+    if v_last_day = v_today then v_streak := greatest(1, v_old_streak);
+    elsif v_last_day = v_today - 1 then v_streak := v_old_streak + 1;
+    else v_streak := 1;
+    end if;
+  end if;
+
+  insert into user_progress(user_id, lesson_id, status, best_code, completed_at)
+  values (p_user_id, p_lesson_id, 'done', left(coalesce(p_code, ''), 5000), now())
+  on conflict (user_id, lesson_id)
+  do update set status = 'done', best_code = excluded.best_code,
+                completed_at = coalesce(user_progress.completed_at, excluded.completed_at);
+
+  update profiles set seeds = seeds + p_reward_seeds,
+                      xp = xp + p_reward_xp, streak = v_streak
+  where id = p_user_id
+  returning seeds, xp into v_seeds, v_xp;
+
+  return jsonb_build_object('awarded', true, 'seeds', v_seeds, 'xp', v_xp, 'streak', v_streak);
+end;
+$$;
+
+revoke all on function record_lesson_attempt(uuid, integer, text) from public, anon, authenticated;
+revoke all on function complete_lesson(uuid, integer, text, integer, integer) from public, anon, authenticated;
+grant execute on function record_lesson_attempt(uuid, integer, text) to service_role;
+grant execute on function complete_lesson(uuid, integer, text, integer, integer) to service_role;
