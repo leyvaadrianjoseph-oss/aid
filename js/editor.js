@@ -43,7 +43,7 @@
   function run() { show(PyRunner.run(code.value)); }
 
   async function check() {
-    const c = PyRunner.check(code.value, lesson.rules);
+    const c = PyRunner.check(code.value, Object.assign({}, lesson.rules, { expected_output: lesson.expected_output }));
     renderGutter(c.result.error ? c.result.error.line : 0);
     writeConsole(c.result.output, c.result.error ? 'Line ' + c.result.error.line + ': ' + c.result.error.message : '', c.passed ? [] : c.messages);
     try {
