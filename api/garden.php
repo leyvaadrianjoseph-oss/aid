@@ -78,6 +78,7 @@ if ($action === 'plant') {
         if (stripos($message, 'daily purchase limit') !== false) fail('You reached your daily limit of 100 items. Come back tomorrow!', 429);
         if (stripos($message, 'not enough seeds') !== false) fail('Not enough seeds yet.', 402);
         if (stripos($message, 'already planted') !== false) fail('That plot is already planted.', 409);
+        if (stripos($message, 'no seeds of this type') !== false) fail('Buy this seed first and make sure it is in your inventory.', 409);
         fail('Could not plant there. Please try again.', 409);
     }
     json_out($result, 201);
