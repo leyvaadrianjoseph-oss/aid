@@ -230,3 +230,9 @@
 @keyframes gardenTargetPulse { 50% { box-shadow:0 0 0 5px rgba(248,214,109,.22); } }
 @media (max-width:900px) { .garden-layout { grid-template-columns:1fr; } .garden-side { grid-template-columns:1fr; } }
 @media (max-width:520px) { .garden-layout { gap:15px; } .plots.land-plots { grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; padding:8px; } .plots.water-plots { grid-template-columns:repeat(4,minmax(0,1fr)); gap:7px; padding:8px; } .plot { min-height:62px; } .fence-slots { grid-template-columns:repeat(4,minmax(0,1fr)); } .inventory-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+
+/* Multi-buy controls and daily shop allowance */
+.shop-quantity-wrap{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:9px;font-size:.78rem;color:var(--muted,#667085)}
+.shop-quantity{width:76px;min-height:36px;padding:6px 9px;border:1px solid var(--line,#d9e2d8);border-radius:9px;background:var(--surface,#fff);color:var(--text,#243326);font:inherit;font-weight:800;text-align:center}
+.shop-quantity:focus{outline:2px solid var(--accent,#5b8c55);outline-offset:2px}
