@@ -457,7 +457,7 @@ begin
   values (p_user_id, p_lesson_id, 'open', left(coalesce(p_code, ''), 5000), 1)
   on conflict (user_id, lesson_id)
   do update set
-    attempts = user_progress.attempts + 1,
+    attempts = coalesce(user_progress.attempts, 0) + 1,
     best_code = case when user_progress.status = 'done'
       then user_progress.best_code else excluded.best_code end
   returning attempts into v_attempts;
