@@ -121,3 +121,63 @@ $$;
 
 revoke all on function garden_harvest(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function garden_harvest(uuid, integer, integer) to service_role;
+
+
+-- Move a placed decoration back into inventory atomically.
+create or replace function garden_pickup_decor(
+  p_user_id uuid,
+  p_item_id integer,
+  p_area text,
+  p_slot integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_decor_id bigint;
+  v_item_id integer;
+  v_quantity integer;
+begin
+  if p_area not in ('fence', 'decor') then
+    raise exception 'Invalid decoration area';
+  end if;
+  if (p_area = 'fence' and (p_slot < 0 or p_slot > 7))
+     or (p_area = 'decor' and (p_slot < 0 or p_slot > 3)) then
+    raise exception 'Invalid decoration slot';
+  end if;
+
+  select id, item_id into v_decor_id, v_item_id
+  from garden_decor
+  where user_id = p_user_id
+    and item_id = p_item_id
+    and area = p_area
+    and slot = p_slot
+  for update;
+
+  if not found then
+    raise exception 'Decoration not found';
+  end if;
+
+  insert into garden_inventory(user_id, item_id, quantity)
+  values (p_user_id, v_item_id, 1)
+  on conflict (user_id, item_id)
+  do update set quantity = garden_inventory.quantity + 1
+  returning quantity into v_quantity;
+
+  delete from garden_decor where id = v_decor_id;
+
+  return jsonb_build_object(
+    'ok', true,
+    'action', 'pickup_decor',
+    'item_id', v_item_id,
+    'area', p_area,
+    'slot', p_slot,
+    'quantity', v_quantity
+  );
+end;
+$$;
+
+revoke all on function garden_pickup_decor(uuid, integer, text, integer) from public, anon, authenticated;
+grant execute on function garden_pickup_decor(uuid, integer, text, integer) to service_role;
