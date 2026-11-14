@@ -157,5 +157,95 @@ $$;
 
 revoke all on function garden_load(uuid) from public, anon, authenticated;
 revoke all on function garden_purchase(uuid, integer, integer) from public, anon, authenticated;
+create or replace function garden_plant(
+  p_user_id uuid,
+  p_item_id integer,
+  p_slot integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $
+declare
+  v_balance integer;
+  v_cost integer;
+  v_kind text;
+  v_active boolean;
+  v_today date := (now() at time zone 'Asia/Manila')::date;
+  v_used integer;
+  v_new_balance integer;
+begin
+  if p_slot is null or p_slot < 0 or p_slot > 11 then
+    raise exception 'Invalid plot';
+  end if;
+
+  select seeds into v_balance
+  from profiles
+  where id = p_user_id
+  for update;
+
+  if not found then
+    raise exception 'Player profile not found';
+  end if;
+
+  select cost_seeds, kind, is_active
+  into v_cost, v_kind, v_active
+  from shop_items
+  where id = p_item_id;
+
+  if not found or v_active is distinct from true or v_kind <> 'seed' then
+    raise exception 'Seed item not available';
+  end if;
+
+  if exists (
+    select 1 from garden_plots
+    where user_id = p_user_id and slot = p_slot
+  ) then
+    raise exception 'Plot already planted';
+  end if;
+
+  insert into garden_daily_purchases (user_id, purchase_date, quantity)
+  values (p_user_id, v_today, 0)
+  on conflict (user_id, purchase_date) do nothing;
+
+  select quantity into v_used
+  from garden_daily_purchases
+  where user_id = p_user_id and purchase_date = v_today
+  for update;
+
+  if v_used + 1 > 100 then
+    raise exception 'Daily purchase limit reached';
+  end if;
+
+  if v_balance < v_cost then
+    raise exception 'Not enough seeds';
+  end if;
+
+  v_new_balance := v_balance - v_cost;
+
+  update profiles set seeds = v_new_balance where id = p_user_id;
+
+  insert into garden_plots (user_id, slot, item_id)
+  values (p_user_id, p_slot, p_item_id);
+
+  update garden_daily_purchases
+  set quantity = quantity + 1
+  where user_id = p_user_id and purchase_date = v_today;
+
+  return jsonb_build_object(
+    'ok', true,
+    'action', 'plant',
+    'item_id', p_item_id,
+    'slot', p_slot,
+    'seeds', v_new_balance,
+    'daily_purchased', v_used + 1,
+    'daily_limit', 100
+  );
+end;
+$;
+
+revoke all on function garden_plant(uuid, integer, integer) from public, anon, authenticated;
 grant execute on function garden_load(uuid) to service_role;
 grant execute on function garden_purchase(uuid, integer, integer) to service_role;
+grant execute on function garden_plant(uuid, integer, integer) to service_role;
