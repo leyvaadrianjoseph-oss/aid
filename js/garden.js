@@ -64,7 +64,7 @@
     renderPlots();
     renderDecor();
     if (action === 'plant') say('Selected ' + item.name + '. Tap an empty land or water plot to plant it.');
-    else if (action === 'water') say('Watering can selected. Tap a growing plant to boost it.');
+    else if (action === 'water') say('Watering can selected. Tap any planted, not-yet-mature crop. Each use advances growth by up to 60 seconds; wait 60 seconds before watering that same plant again.');
     else if (action === 'shovel') say('Shovel selected. Tap any planted plot to remove that plant. The plant will not be refunded.');
     else say('Selected ' + item.name + '. Tap a highlighted fence or decoration space to place it.');
   }
@@ -134,11 +134,11 @@
           button.addEventListener('click', () => {
             if (selectedAction === 'shovel' && selectedItem()) {
               removePlant(slot, Number(item.id));
-            } else if (selectedAction === 'water' && selectedItem()) {
+            } else if (selectedAction === 'water') {
               if (state.progress >= 1) {
                 say('This plant is already fully grown. Harvest it instead.');
                 PG.toast('This plant is ready to harvest.');
-              } else if (owned(canId()) > 0 && selectedItem().sprite === 'can') {
+              } else if (owned(canId()) > 0) {
                 water(slot, Number(item.id));
               } else {
                 say('You need a watering can in your inventory to water plants.', true);
@@ -313,8 +313,11 @@
         PG.setStats(stats);
       }
       await reloadGarden();
-      say(successMessage);
-      PG.toast(successMessage);
+      const finalMessage = result && result.message ? result.message : successMessage;
+      if (finalMessage) {
+        say(finalMessage);
+        PG.toast(finalMessage);
+      }
     } catch (error) {
       say(error.message || 'Something went wrong. Try again.', true);
       PG.toast(error.message || 'Something went wrong.', true);
@@ -342,7 +345,26 @@
   async function water(slot, itemId) {
     const item = byId(itemId);
     if (busy) return;
-    await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'water', item_id: itemId, slot } }), item.name + ' watered. Growth boosted!');
+    if (!item || item.kind !== 'seed') {
+      say('Choose a planted crop to water.', true);
+      return;
+    }
+    if (owned(canId()) < 1) {
+      say('You need a watering can in your inventory first.', true);
+      return;
+    }
+    await runAction(async () => {
+      const result = await PG.api('/api/garden.php', {
+        method: 'POST',
+        body: { action: 'water', item_id: itemId, slot }
+      });
+      const seconds = Number(result.boost_seconds || 0);
+      return Object.assign({}, result, {
+        message: seconds > 0
+          ? item.name + ' watered! Growth advanced by ' + seconds + ' seconds.'
+          : item.name + ' watered, but it was already almost grown.'
+      });
+    }, null);
   }
 
   async function harvest(slot, itemId) {
