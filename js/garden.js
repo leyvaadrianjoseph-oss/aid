@@ -134,17 +134,25 @@
           button.addEventListener('click', () => {
             if (selectedAction === 'shovel' && selectedItem()) {
               removePlant(slot, Number(item.id));
+            } else if (selectedAction === 'water' && selectedItem()) {
+              if (state.progress >= 1) {
+                say('This plant is already fully grown. Harvest it instead.');
+                PG.toast('This plant is ready to harvest.');
+              } else if (owned(canId()) > 0 && selectedItem().sprite === 'can') {
+                water(slot, Number(item.id));
+              } else {
+                say('You need a watering can in your inventory to water plants.', true);
+              }
             } else if (state.progress >= 1) {
               harvest(slot, Number(item.id));
-            } else if (selectedAction === 'water' && selectedItem() && owned(canId()) > 0) {
-              water(slot, Number(item.id));
             } else if (selectedAction === 'plant') {
               PG.toast('That plot is occupied. Choose an empty plot.', true);
             } else if (owned(canId()) > 0) {
-              water(slot, Number(item.id));
+              selectItem(byId(canId()), 'water');
+              say('Watering can selected. Tap a growing plant to boost its growth.');
             } else {
-              selectItem(byId(canId()) || item, 'water');
-              PG.toast('Choose or buy a watering can to water this plant.');
+              say('Buy a watering can from the shop first.', true);
+              PG.toast('Choose or buy a watering can to water this plant.', true);
             }
           });
         } else if (item) {
@@ -343,10 +351,43 @@
     await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'harvest', item_id: itemId, slot } }), item.name + ' harvested! Seeds and XP added.');
   }
 
+  function confirmGardenAction(title, description, confirmLabel) {
+    return new Promise((resolve) => {
+      const overlay = PG.el('div', 'garden-confirm-overlay');
+      overlay.setAttribute('role', 'presentation');
+      const dialog = PG.el('section', 'garden-confirm-dialog');
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', 'garden-confirm-title');
+      dialog.append(PG.el('span', 'garden-confirm-kicker', 'GARDEN TOOL'));
+      dialog.append(PG.el('h2', null, title));
+      dialog.append(PG.el('p', null, description));
+      const actions = PG.el('div', 'garden-confirm-actions');
+      const cancel = PG.el('button', 'garden-confirm-button garden-confirm-cancel', 'Cancel');
+      cancel.type = 'button';
+      const confirm = PG.el('button', 'garden-confirm-button garden-confirm-accept', confirmLabel);
+      confirm.type = 'button';
+      const close = (value) => { overlay.remove(); resolve(value); };
+      cancel.addEventListener('click', () => close(false));
+      confirm.addEventListener('click', () => close(true));
+      overlay.addEventListener('click', (event) => { if (event.target === overlay) close(false); });
+      actions.append(cancel, confirm);
+      dialog.append(actions);
+      overlay.append(dialog);
+      document.body.append(overlay);
+      confirm.focus();
+    });
+  }
+
   async function removePlant(slot, plantItemId) {
     const tool = selectedItem();
     if (!tool || selectedAction !== 'shovel' || busy) return;
-    if (!window.confirm('Remove this plant? It will not be returned to your seed inventory.')) return;
+    const confirmed = await confirmGardenAction(
+      'Remove this plant?',
+      'The plant will be cleared from this plot and will not be returned to your seed inventory. Your shovel will stay in your inventory.',
+      'Remove plant'
+    );
+    if (!confirmed || busy) return;
     await runAction(() => PG.api('/api/garden.php', {
       method: 'POST',
       body: { action: 'remove_plant', item_id: tool.id, plant_item_id: plantItemId, slot }
