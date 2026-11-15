@@ -588,3 +588,83 @@ body[data-role="user"] { min-height: 100vh; background: linear-gradient(#52bddb 
 .garden-night .decor-slot-button { background:#38465a; color:#fff1cf; border-color:#a99b72; }
 .garden-night .decor-remove-button { background:#633d43; border-color:#d58b80; }
 .garden-night .decor-replace-button { background:#365b4b; border-color:#83b28c; }
+
+
+/* Pixel-art confirmation panel for garden tool actions */
+.garden-confirm-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(24, 43, 37, .68);
+}
+.garden-confirm-dialog {
+  width: min(430px, 100%);
+  padding: 24px;
+  color: #244b48;
+  background: #fff6df;
+  border: 3px solid #31564e;
+  border-radius: 5px;
+  box-shadow: 0 8px 0 #244b48, 0 16px 36px rgba(0,0,0,.28);
+  text-align: center;
+}
+.garden-confirm-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #49845e;
+  font: 700 .72rem var(--font-head);
+  letter-spacing: .14em;
+}
+.garden-confirm-dialog h2 {
+  margin: 0 0 10px;
+  font: 700 1.45rem var(--font-head);
+  text-transform: uppercase;
+}
+.garden-confirm-dialog p {
+  margin: 0;
+  color: #587364;
+  font-weight: 800;
+  line-height: 1.55;
+}
+.garden-confirm-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.garden-confirm-button {
+  min-height: 42px;
+  padding: 8px 15px;
+  border: 2px solid #31564e;
+  border-radius: 4px;
+  box-shadow: 0 4px 0 #31564e;
+  color: #244b48;
+  background: #f7e6bc;
+  font: 700 .9rem var(--font-head);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.garden-confirm-accept {
+  color: #fffdf5;
+  background: #b65343;
+  border-color: #7c3b32;
+  box-shadow: 0 4px 0 #7c3b32;
+}
+.garden-confirm-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #31564e;
+}
+.garden-confirm-button:focus-visible {
+  outline: 3px solid #e3a74d;
+  outline-offset: 3px;
+}
+.garden-night .garden-confirm-dialog {
+  color: #fff1cf;
+  background: #263b43;
+  border-color: #a99b72;
+  box-shadow: 0 8px 0 #172b32, 0 16px 36px rgba(0,0,0,.4);
+}
+.garden-night .garden-confirm-dialog p { color: #d4d9b7; }
