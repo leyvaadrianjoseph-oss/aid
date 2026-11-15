@@ -641,3 +641,64 @@ $$;
 
 revoke all on function garden_replace_decor(uuid, integer, text, integer) from public, anon, authenticated;
 grant execute on function garden_replace_decor(uuid, integer, text, integer) to service_role;
+
+
+-- Add a reusable shovel tool to the shop, without creating duplicates.
+insert into shop_items(name, kind, cost_seeds, sprite, is_active)
+select 'Garden shovel', 'tool', 45, 'shovel', true
+where not exists (select 1 from shop_items where sprite = 'shovel');
+
+-- Remove a planted crop using an owned reusable shovel.
+create or replace function garden_remove_plant(
+  p_user_id uuid,
+  p_tool_item_id integer,
+  p_plant_item_id integer,
+  p_slot integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_tool_sprite text;
+  v_tool_kind text;
+  v_quantity integer;
+  v_plot_id bigint;
+begin
+  if p_slot is null or p_slot < 0 or p_slot > 11 then
+    raise exception 'Invalid plot';
+  end if;
+
+  select sprite, kind into v_tool_sprite, v_tool_kind
+  from shop_items
+  where id = p_tool_item_id and is_active = true;
+  if not found or v_tool_kind <> 'tool' or v_tool_sprite <> 'shovel' then
+    raise exception 'Shovel tool not available';
+  end if;
+
+  select quantity into v_quantity
+  from garden_inventory
+  where user_id = p_user_id and item_id = p_tool_item_id
+  for update;
+  if not found or coalesce(v_quantity, 0) < 1 then
+    raise exception 'Shovel not owned';
+  end if;
+
+  select id into v_plot_id
+  from garden_plots
+  where user_id = p_user_id and slot = p_slot and item_id = p_plant_item_id
+  for update;
+  if not found then raise exception 'Plant not found'; end if;
+
+  delete from garden_plots where id = v_plot_id;
+
+  return jsonb_build_object(
+    'ok', true, 'action', 'remove_plant',
+    'slot', p_slot, 'removed_item_id', p_plant_item_id
+  );
+end;
+$$;
+
+revoke all on function garden_remove_plant(uuid, integer, integer, integer) from public, anon, authenticated;
+grant execute on function garden_remove_plant(uuid, integer, integer, integer) to service_role;
