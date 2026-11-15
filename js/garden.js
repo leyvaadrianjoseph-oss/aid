@@ -127,8 +127,11 @@
         if (item && item.kind === 'seed') {
           const state = growth(plot, item);
           button.classList.add('is-planted', 'plant-' + state.stage.toLowerCase());
+          const wateredAgo = plot.last_watered_at ? elapsedSeconds(plot.last_watered_at) : Infinity;
+          const isWet = wateredAgo < 60;
+          if (isWet) button.classList.add('is-wet');
           button.append(PG.spriteEl(item.sprite, 'plant-sprite'));
-          button.append(PG.el('span', 'plant-details', state.progress >= 1 ? 'Ready · Harvest' : state.stage + ' · ' + state.percent + '%'));
+          button.append(PG.el('span', 'plant-details', state.progress >= 1 ? 'Ready · Harvest' : (isWet ? '💧 Wet · ' : '') + state.stage + ' · ' + state.percent + '%'));
           if (state.progress >= 1) button.classList.add('is-ready');
           button.setAttribute('aria-label', item.name + ', ' + (state.progress >= 1 ? 'ready to harvest' : state.percent + '% grown') + ', plot ' + (slot + 1));
           button.addEventListener('click', () => {
