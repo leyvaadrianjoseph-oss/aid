@@ -346,6 +346,7 @@
   async function removePlant(slot, plantItemId) {
     const tool = selectedItem();
     if (!tool || selectedAction !== 'shovel' || busy) return;
+    if (!window.confirm('Remove this plant? It will not be returned to your seed inventory.')) return;
     await runAction(() => PG.api('/api/garden.php', {
       method: 'POST',
       body: { action: 'remove_plant', item_id: tool.id, plant_item_id: plantItemId, slot }
