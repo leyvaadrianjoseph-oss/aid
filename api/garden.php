@@ -47,6 +47,25 @@ $itemId = int_in($in, 'item_id', 1, 1000000, 0);
 $item = garden_item($itemId);
 $kind = (string)$item['kind'];
 
+if ($action === 'remove_plant') {
+    if ($kind !== 'tool' || $item['sprite'] !== 'shovel') fail('Select the shovel tool first.');
+    $slot = int_in($in, 'slot', 0, 11, -1);
+    $plantItemId = int_in($in, 'plant_item_id', 1, 1000000, 0);
+    [$code, $result] = sb_raw('POST', '/rpc/garden_remove_plant', [
+        'p_user_id' => $me['id'],
+        'p_tool_item_id' => $itemId,
+        'p_plant_item_id' => $plantItemId,
+        'p_slot' => $slot
+    ]);
+    if ($code < 200 || $code >= 300) {
+        $message = is_array($result) ? (string)($result['message'] ?? $result['details'] ?? '') : '';
+        if (stripos($message, 'shovel not owned') !== false) fail('You need to own a shovel first.', 403);
+        if (stripos($message, 'plant not found') !== false) fail('That plant is no longer in this plot.', 404);
+        fail('Could not remove this plant. Please try again.', 409);
+    }
+    json_out($result);
+}
+
 if ($action === 'harvest') {
     if ($kind !== 'seed') fail('Only planted crops can be harvested.');
     $slot = int_in($in, 'slot', 0, 11, -1);
