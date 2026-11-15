@@ -559,3 +559,85 @@ $$;
 revoke all on function garden_load(uuid) from public, anon, authenticated;
 grant execute on function garden_load(uuid) to service_role;
 
+
+
+-- Replace an occupied fence or decor slot in one transaction.
+-- The displaced decoration is returned to inventory; the selected one is consumed.
+create or replace function garden_replace_decor(
+  p_user_id uuid,
+  p_new_item_id integer,
+  p_area text,
+  p_slot integer
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_old_decor_id bigint;
+  v_old_item_id integer;
+  v_new_kind text;
+  v_new_sprite text;
+  v_quantity integer;
+begin
+  if p_area not in ('fence', 'decor') then
+    raise exception 'Invalid decoration area';
+  end if;
+  if (p_area = 'fence' and (p_slot < 0 or p_slot > 7))
+     or (p_area = 'decor' and (p_slot < 0 or p_slot > 3)) then
+    raise exception 'Invalid decoration slot';
+  end if;
+
+  select kind, sprite into v_new_kind, v_new_sprite
+  from shop_items
+  where id = p_new_item_id and is_active = true;
+  if not found or v_new_kind <> 'decor' then
+    raise exception 'Replacement item is not an active decoration';
+  end if;
+  if (v_new_sprite = 'fence') <> (p_area = 'fence') then
+    raise exception 'Replacement item belongs in a different area';
+  end if;
+
+  select id, item_id into v_old_decor_id, v_old_item_id
+  from garden_decor
+  where user_id = p_user_id and area = p_area and slot = p_slot
+  for update;
+  if not found then raise exception 'Decoration not found'; end if;
+
+  if v_old_item_id = p_new_item_id then
+    return jsonb_build_object('ok', true, 'action', 'replace_decor', 'unchanged', true);
+  end if;
+
+  select quantity into v_quantity
+  from garden_inventory
+  where user_id = p_user_id and item_id = p_new_item_id
+  for update;
+  if not found or coalesce(v_quantity, 0) < 1 then
+    raise exception 'Replacement item is not in inventory';
+  end if;
+
+  update garden_inventory
+  set quantity = quantity - 1
+  where user_id = p_user_id and item_id = p_new_item_id and quantity = v_quantity;
+  if not found then raise exception 'Inventory changed. Try again'; end if;
+
+  insert into garden_inventory(user_id, item_id, quantity)
+  values (p_user_id, v_old_item_id, 1)
+  on conflict (user_id, item_id)
+  do update set quantity = garden_inventory.quantity + 1;
+
+  update garden_decor
+  set item_id = p_new_item_id, placed_at = now()
+  where id = v_old_decor_id;
+
+  return jsonb_build_object(
+    'ok', true, 'action', 'replace_decor',
+    'old_item_id', v_old_item_id, 'item_id', p_new_item_id,
+    'area', p_area, 'slot', p_slot
+  );
+end;
+$$;
+
+revoke all on function garden_replace_decor(uuid, integer, text, integer) from public, anon, authenticated;
+grant execute on function garden_replace_decor(uuid, integer, text, integer) to service_role;
