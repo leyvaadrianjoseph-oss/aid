@@ -65,6 +65,7 @@
     renderDecor();
     if (action === 'plant') say('Selected ' + item.name + '. Tap an empty land or water plot to plant it.');
     else if (action === 'water') say('Watering can selected. Tap a growing plant to boost it.');
+    else if (action === 'shovel') say('Shovel selected. Tap any planted plot to remove that plant. The plant will not be refunded.');
     else say('Selected ' + item.name + '. Tap a highlighted fence or decoration space to place it.');
   }
 
@@ -86,6 +87,7 @@
     copy.append(PG.el('strong', null, item.name));
     const description = selectedAction === 'plant' ? 'Ready to plant · tap an empty plot'
       : selectedAction === 'water' ? 'Reusable tool · tap a growing plant'
+      : selectedAction === 'shovel' ? 'Reusable tool · tap a planted plot to remove it'
       : 'Ready to place · tap a highlighted space';
     copy.append(PG.el('p', null, description));
     selectedEl.append(copy);
@@ -109,7 +111,7 @@
       return;
     }
     ownedItems.forEach((item) => {
-      const action = item.kind === 'seed' ? 'plant' : item.kind === 'tool' ? 'water' : 'decor';
+      const action = item.kind === 'seed' ? 'plant' : item.kind === 'tool' ? (item.sprite === 'shovel' ? 'shovel' : 'water') : 'decor';
       inventoryEl.append(itemButton(item, owned(item.id), action));
     });
   }
@@ -130,7 +132,9 @@
           if (state.progress >= 1) button.classList.add('is-ready');
           button.setAttribute('aria-label', item.name + ', ' + (state.progress >= 1 ? 'ready to harvest' : state.percent + '% grown') + ', plot ' + (slot + 1));
           button.addEventListener('click', () => {
-            if (state.progress >= 1) {
+            if (selectedAction === 'shovel' && selectedItem()) {
+              removePlant(slot, Number(item.id));
+            } else if (state.progress >= 1) {
               harvest(slot, Number(item.id));
             } else if (selectedAction === 'water' && selectedItem() && owned(canId()) > 0) {
               water(slot, Number(item.id));
@@ -168,27 +172,39 @@
     for (let slot = 0; slot < count; slot++) {
       const placed = decor.find((entry) => entry.area === area && Number(entry.slot) === slot);
       const item = placed ? byId(placed.item_id) : null;
-      const button = PG.el('button', 'garden-decor-slot' + (item ? ' is-filled' : '') + (selectedAction === 'decor' && !item ? ' is-target' : ''));
-      button.type = 'button';
+      const wrapper = PG.el('div', 'garden-decor-slot' + (item ? ' is-filled' : '') + (selectedAction === 'decor' && !item ? ' is-target' : ''));
       if (item) {
-        button.append(PG.spriteEl(item.sprite, 'decor-sprite'));
-        button.append(PG.el('small', 'decor-name', item.name));
+        wrapper.append(PG.spriteEl(item.sprite, 'decor-sprite'));
+        wrapper.append(PG.el('small', 'decor-name', item.name));
         const chosen = selectedItem();
         const canReplace = selectedAction === 'decor' && chosen && chosen.kind === 'decor'
           && (chosen.sprite === 'fence' ? 'fence' : 'decor') === area
           && Number(chosen.id) !== Number(item.id);
-        button.setAttribute('aria-label', item.name + ' placed. ' + (canReplace ? 'Select to replace it with ' + chosen.name : 'Select to return it to inventory.'));
-        button.title = canReplace ? 'Click to replace with ' + chosen.name : 'Click to remove and return to inventory';
-        button.addEventListener('click', () => {
-          if (canReplace) replaceDecor(slot, area, Number(chosen.id), item.name, chosen.name);
-          else pickupDecor(slot, area, Number(item.id));
-        });
+        const actions = PG.el('div', 'decor-slot-actions');
+        if (canReplace) {
+          const replace = PG.el('button', 'decor-slot-button decor-replace-button', 'Replace');
+          replace.type = 'button';
+          replace.addEventListener('click', () => replaceDecor(slot, area, Number(chosen.id), item.name, chosen.name));
+          actions.append(replace);
+        }
+        const remove = PG.el('button', 'decor-slot-button decor-remove-button', 'Remove');
+        remove.type = 'button';
+        remove.setAttribute('aria-label', 'Remove ' + item.name + ' and return it to inventory');
+        remove.addEventListener('click', () => pickupDecor(slot, area, Number(item.id)));
+        actions.append(remove);
+        wrapper.append(actions);
       } else {
-        button.append(PG.el('span', 'decor-plus', '+'));
-        button.append(PG.el('small', null, area === 'fence' ? 'Fence' : 'Decor'));
-        button.addEventListener('click', () => placeDecor(slot, area));
+        wrapper.classList.add('is-empty');
+        wrapper.append(PG.el('span', 'decor-plus', '+'));
+        wrapper.append(PG.el('small', null, area === 'fence' ? 'Fence' : 'Decor'));
+        wrapper.addEventListener('click', () => placeDecor(slot, area));
+        wrapper.setAttribute('role', 'button');
+        wrapper.setAttribute('tabindex', '0');
+        wrapper.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); placeDecor(slot, area); }
+        });
       }
-      root.append(button);
+      root.append(wrapper);
     }
   }
 
@@ -325,6 +341,15 @@
     const item = byId(itemId);
     if (busy) return;
     await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'harvest', item_id: itemId, slot } }), item.name + ' harvested! Seeds and XP added.');
+  }
+
+  async function removePlant(slot, plantItemId) {
+    const tool = selectedItem();
+    if (!tool || selectedAction !== 'shovel' || busy) return;
+    await runAction(() => PG.api('/api/garden.php', {
+      method: 'POST',
+      body: { action: 'remove_plant', item_id: tool.id, plant_item_id: plantItemId, slot }
+    }), 'Plant removed. Your shovel is still in your inventory.');
   }
 
   async function placeDecor(slot, targetArea) {
