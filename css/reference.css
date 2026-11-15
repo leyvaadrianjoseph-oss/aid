@@ -577,3 +577,14 @@ body[data-role="user"] { min-height: 100vh; background: linear-gradient(#52bddb 
 .xp-history-item > div { display:grid; gap:3px; }
 .xp-history-item small { color:#6d8174; font-size:.76rem; }
 .xp-history-amount { flex:none; color:#33865c; font:700 1rem var(--font-head); }
+
+
+/* Clear visible controls for removing or replacing placed garden decorations */
+.garden-decor-slot { position:relative; }
+.decor-slot-actions { display:flex; gap:4px; justify-content:center; flex-wrap:wrap; margin-top:3px; }
+.decor-slot-button { border:1px solid #8c6947; border-radius:6px; padding:3px 7px; background:#fff8e8; color:#553d28; font-size:.65rem; font-weight:1000; cursor:pointer; }
+.decor-remove-button { border-color:#b65b4d; background:#fae2d9; color:#873b30; }
+.decor-replace-button { border-color:#648b58; background:#e4f1d9; color:#315d35; }
+.garden-night .decor-slot-button { background:#38465a; color:#fff1cf; border-color:#a99b72; }
+.garden-night .decor-remove-button { background:#633d43; border-color:#d58b80; }
+.garden-night .decor-replace-button { background:#365b4b; border-color:#83b28c; }
