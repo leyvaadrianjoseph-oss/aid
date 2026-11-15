@@ -10,6 +10,7 @@
     mushroom: ['..rrrr..', '.rwrrwr.', 'rrrrrrrr', 'rwrrrrwr', '..wwww..', '..wwww..', '..wwww..', '........'],
     cactus: ['...ff...', '...ff...', '.f.ff.f.', '.f.ff.f.', '.ffffff.', '...ff...', '...ff...', '...ff...'],
     can: ['......bb', '.bbbb.bb', 'bbbbbbb.', 'bbbbbb..', 'bbbbbb..', 'bbbbbb..', '.bbbbb..', '........'],
+    shovel: ['....ss..', '....ss..', '....ss..', '....ss..', '...sss..', '..ttt...', '.tbbbt..', '..twt...'],
     fence: ['s..s..s.', 'sssssss.', 's..s..s.', 's..s..s.', 'sssssss.', 's..s..s.', 's..s..s.', '........'],
     pond: ['........', '..bbbb..', '.bbwbbb.', 'bbbbbbbb', 'bbbbbwbb', '.bbbbbb.', '..bbbb..', '........'],
     lantern: ['...yy...', '..tttt..', '..tyyt..', '..tyyt..', '..tttt..', '...ss...', '...ss...', '..ssss..'],
@@ -115,6 +116,8 @@
   PG.RANKS = [
     { xp: 0, name: 'Seedling' }, { xp: 100, name: 'Sprout' }, { xp: 250, name: 'Gardener' },
     { xp: 500, name: 'Botanist' }, { xp: 1000, name: 'Master gardener' },
+    { xp: 1500, name: 'Seed keeper' }, { xp: 2500, name: 'Garden sage' },
+    { xp: 4000, name: 'Nature mentor' }, { xp: 6000, name: 'Python legend' },
   ];
   PG.rankFor = function (xp) {
     let i = 0;

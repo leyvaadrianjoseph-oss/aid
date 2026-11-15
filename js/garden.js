@@ -64,7 +64,8 @@
     renderPlots();
     renderDecor();
     if (action === 'plant') say('Selected ' + item.name + '. Tap an empty land or water plot to plant it.');
-    else if (action === 'water') say('Watering can selected. Tap a growing plant to boost it.');
+    else if (action === 'water') say('Watering can selected. Tap any planted, not-yet-mature crop. Each use advances growth by up to 60 seconds; wait 60 seconds before watering that same plant again.');
+    else if (action === 'shovel') say('Shovel selected. Tap any planted plot to remove that plant. The plant will not be refunded.');
     else say('Selected ' + item.name + '. Tap a highlighted fence or decoration space to place it.');
   }
 
@@ -86,6 +87,7 @@
     copy.append(PG.el('strong', null, item.name));
     const description = selectedAction === 'plant' ? 'Ready to plant · tap an empty plot'
       : selectedAction === 'water' ? 'Reusable tool · tap a growing plant'
+      : selectedAction === 'shovel' ? 'Reusable tool · tap a planted plot to remove it'
       : 'Ready to place · tap a highlighted space';
     copy.append(PG.el('p', null, description));
     selectedEl.append(copy);
@@ -102,14 +104,14 @@
 
   function renderInventory() {
     inventoryEl.textContent = '';
-    const ownedItems = items.filter((item) => item.kind !== 'seed' && owned(item.id) > 0);
+    const ownedItems = items.filter((item) => owned(item.id) > 0);
     inventoryCount.textContent = String(ownedItems.reduce((sum, item) => sum + owned(item.id), 0));
     if (!ownedItems.length) {
       inventoryEl.append(PG.el('p', 'inventory-empty', 'Your tools and decorations will appear here after you buy them.'));
       return;
     }
     ownedItems.forEach((item) => {
-      const action = item.kind === 'tool' ? 'water' : 'decor';
+      const action = item.kind === 'seed' ? 'plant' : item.kind === 'tool' ? (item.sprite === 'shovel' ? 'shovel' : 'water') : 'decor';
       inventoryEl.append(itemButton(item, owned(item.id), action));
     });
   }
@@ -125,19 +127,35 @@
         if (item && item.kind === 'seed') {
           const state = growth(plot, item);
           button.classList.add('is-planted', 'plant-' + state.stage.toLowerCase());
+          const wateredAgo = plot.last_watered_at ? elapsedSeconds(plot.last_watered_at) : Infinity;
+          const isWet = wateredAgo < 60;
+          if (isWet) button.classList.add('is-wet');
           button.append(PG.spriteEl(item.sprite, 'plant-sprite'));
-          button.append(PG.el('span', 'plant-details', state.stage + ' · ' + state.percent + '%'));
-          button.setAttribute('aria-label', item.name + ', ' + state.percent + '% grown, plot ' + (slot + 1));
+          button.append(PG.el('span', 'plant-details', state.progress >= 1 ? 'Ready · Harvest' : (isWet ? '💧 Wet · ' : '') + state.stage + ' · ' + state.percent + '%'));
+          if (state.progress >= 1) button.classList.add('is-ready');
+          button.setAttribute('aria-label', item.name + ', ' + (state.progress >= 1 ? 'ready to harvest' : state.percent + '% grown') + ', plot ' + (slot + 1));
           button.addEventListener('click', () => {
-            if (selectedAction === 'water' && selectedItem() && owned(canId()) > 0) {
-              water(slot, Number(item.id));
+            if (selectedAction === 'shovel' && selectedItem()) {
+              removePlant(slot, Number(item.id));
+            } else if (selectedAction === 'water') {
+              if (state.progress >= 1) {
+                say('This plant is already fully grown. Harvest it instead.');
+                PG.toast('This plant is ready to harvest.');
+              } else if (owned(canId()) > 0) {
+                water(slot, Number(item.id));
+              } else {
+                say('You need a watering can in your inventory to water plants.', true);
+              }
+            } else if (state.progress >= 1) {
+              harvest(slot, Number(item.id));
             } else if (selectedAction === 'plant') {
               PG.toast('That plot is occupied. Choose an empty plot.', true);
             } else if (owned(canId()) > 0) {
-              water(slot, Number(item.id));
+              selectItem(byId(canId()), 'water');
+              say('Watering can selected. Tap a growing plant to boost its growth.');
             } else {
-              selectItem(byId(canId()) || item, 'water');
-              PG.toast('Choose or buy a watering can to water this plant.');
+              say('Buy a watering can from the shop first.', true);
+              PG.toast('Choose or buy a watering can to water this plant.', true);
             }
           });
         } else if (item) {
@@ -165,24 +183,62 @@
     for (let slot = 0; slot < count; slot++) {
       const placed = decor.find((entry) => entry.area === area && Number(entry.slot) === slot);
       const item = placed ? byId(placed.item_id) : null;
-      const button = PG.el('button', 'garden-decor-slot' + (item ? ' is-filled' : '') + (selectedAction === 'decor' && !item ? ' is-target' : ''));
-      button.type = 'button';
+      const wrapper = PG.el('div', 'garden-decor-slot' + (item ? ' is-filled' : '') + (selectedAction === 'decor' && !item ? ' is-target' : ''));
       if (item) {
-        button.append(PG.spriteEl(item.sprite, 'decor-sprite'));
-        button.append(PG.el('small', 'decor-name', item.name));
-        button.setAttribute('aria-label', item.name + ' placed');
+        wrapper.append(PG.spriteEl(item.sprite, 'decor-sprite'));
+        wrapper.append(PG.el('small', 'decor-name', item.name));
+        const chosen = selectedItem();
+        const canReplace = selectedAction === 'decor' && chosen && chosen.kind === 'decor'
+          && (chosen.sprite === 'fence' ? 'fence' : 'decor') === area
+          && Number(chosen.id) !== Number(item.id);
+        const actions = PG.el('div', 'decor-slot-actions');
+        if (canReplace) {
+          const replace = PG.el('button', 'decor-slot-button decor-replace-button', 'Replace');
+          replace.type = 'button';
+          replace.addEventListener('click', () => replaceDecor(slot, area, Number(chosen.id), item.name, chosen.name));
+          actions.append(replace);
+        }
+        const remove = PG.el('button', 'decor-slot-button decor-remove-button', 'Remove');
+        remove.type = 'button';
+        remove.setAttribute('aria-label', 'Remove ' + item.name + ' and return it to inventory');
+        remove.addEventListener('click', () => pickupDecor(slot, area, Number(item.id)));
+        actions.append(remove);
+        wrapper.append(actions);
       } else {
-        button.append(PG.el('span', 'decor-plus', '+'));
-        button.append(PG.el('small', null, area === 'fence' ? 'Fence' : 'Decor'));
-        button.addEventListener('click', () => placeDecor(slot, area));
+        wrapper.classList.add('is-empty');
+        wrapper.append(PG.el('span', 'decor-plus', '+'));
+        wrapper.append(PG.el('small', null, area === 'fence' ? 'Fence' : 'Decor'));
+        wrapper.addEventListener('click', () => placeDecor(slot, area));
+        wrapper.setAttribute('role', 'button');
+        wrapper.setAttribute('tabindex', '0');
+        wrapper.addEventListener('keydown', (event) => {
+          if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); placeDecor(slot, area); }
+        });
       }
-      root.append(button);
+      root.append(wrapper);
     }
   }
 
   function renderDecor() {
     renderDecorArea('fence', fenceEl, 8);
     renderDecorArea('decor', decorEl, 4);
+  }
+
+  async function pickupDecor(slot, area, itemId) {
+    const item = byId(itemId);
+    if (!item || busy) return;
+    await runAction(() => PG.api('/api/garden.php', {
+      method: 'POST',
+      body: { action: 'pickup_decor', item_id: itemId, area, slot }
+    }), item.name + ' returned to your inventory.');
+  }
+
+  async function replaceDecor(slot, area, newItemId, oldName, newName) {
+    if (busy) return;
+    await runAction(() => PG.api('/api/garden.php', {
+      method: 'POST',
+      body: { action: 'replace_decor', item_id: newItemId, area, slot }
+    }), oldName + ' returned to inventory and replaced with ' + newName + '.');
   }
 
   function renderShop() {
@@ -198,13 +254,13 @@
       info.append(PG.el('strong', null, item.name));
       info.append(PG.el('small', null, item.cost_seeds + ' seeds' + (item.kind === 'seed' ? ' · ' + Math.ceil(Number(item.growth_seconds || 300) / 60) + ' min' : '')));
       card.append(info);
-      if (item.kind !== 'seed' && !isOwnedTool) {
+      if (!isOwnedTool) {
         const quantityWrap = PG.el('label', 'shop-quantity-wrap');
         quantityWrap.append(PG.el('span', null, 'Quantity'));
         const quantity = PG.el('input', 'shop-quantity');
         quantity.type = 'number';
         quantity.min = '1';
-        quantity.max = String(Math.max(1, Math.min(100, dailyLimit - dailyPurchased)));
+        quantity.max = String(item.kind === 'tool' ? 1 : Math.max(1, Math.min(100, dailyLimit - dailyPurchased)));
         quantity.value = '1';
         quantity.inputMode = 'numeric';
         quantity.setAttribute('aria-label', 'Quantity to buy for ' + item.name);
@@ -213,13 +269,12 @@
         const button = PG.el('button', 'shop-action', 'Buy');
         button.type = 'button';
         button.disabled = poor || dailyPurchased >= dailyLimit;
-        button.addEventListener('click', () => purchase(item, Math.max(1, Math.min(100, Number(quantity.value) || 1))));
+        button.addEventListener('click', () => purchase(item, Math.max(1, Math.min(item.kind === 'tool' ? 1 : 100, Number(quantity.value) || 1))));
         card.append(button);
       } else {
-        const button = PG.el('button', 'shop-action', item.kind === 'seed' ? 'Select' : 'Owned');
+        const button = PG.el('button', 'shop-action', 'Owned');
         button.type = 'button';
-        button.disabled = item.kind !== 'seed';
-        button.addEventListener('click', () => selectItem(item, 'plant'));
+        button.disabled = true;
         card.append(button);
       }
       shopEl.append(card);
@@ -244,7 +299,7 @@
     dailyPurchased = Number(data.daily_purchased || 0);
     dailyLimit = Number(data.daily_limit || 100);
     PG.setStats({ seeds });
-    if (selectedId !== null && !byId(selectedId)) { selectedId = null; selectedAction = null; }
+    if (selectedId !== null && (!byId(selectedId) || (selectedAction === 'decor' && owned(selectedId) < 1))) { selectedId = null; selectedAction = null; }
     renderSelection(); renderPlots(); renderInventory(); renderDecor(); renderShop();
   }
 
@@ -253,10 +308,19 @@
     busy = true;
     document.body.classList.add('garden-busy');
     try {
-      await task();
+      const result = await task();
+      if (result && (result.seeds !== undefined || result.xp !== undefined)) {
+        const stats = {};
+        if (result.seeds !== undefined) stats.seeds = result.seeds;
+        if (result.xp !== undefined) stats.xp = result.xp;
+        PG.setStats(stats);
+      }
       await reloadGarden();
-      say(successMessage);
-      PG.toast(successMessage);
+      const finalMessage = result && result.message ? result.message : successMessage;
+      if (finalMessage) {
+        say(finalMessage);
+        PG.toast(finalMessage);
+      }
     } catch (error) {
       say(error.message || 'Something went wrong. Try again.', true);
       PG.toast(error.message || 'Something went wrong.', true);
@@ -284,7 +348,75 @@
   async function water(slot, itemId) {
     const item = byId(itemId);
     if (busy) return;
-    await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'water', item_id: itemId, slot } }), item.name + ' watered. Growth boosted!');
+    if (!item || item.kind !== 'seed') {
+      say('Choose a planted crop to water.', true);
+      return;
+    }
+    if (owned(canId()) < 1) {
+      say('You need a watering can in your inventory first.', true);
+      return;
+    }
+    await runAction(async () => {
+      const result = await PG.api('/api/garden.php', {
+        method: 'POST',
+        body: { action: 'water', item_id: itemId, slot }
+      });
+      const seconds = Number(result.boost_seconds || 0);
+      return Object.assign({}, result, {
+        message: seconds > 0
+          ? item.name + ' watered! Growth advanced by ' + seconds + ' seconds.'
+          : item.name + ' watered, but it was already almost grown.'
+      });
+    }, null);
+  }
+
+  async function harvest(slot, itemId) {
+    const item = byId(itemId);
+    if (busy) return;
+    await runAction(() => PG.api('/api/garden.php', { method: 'POST', body: { action: 'harvest', item_id: itemId, slot } }), item.name + ' harvested! Seeds and XP added.');
+  }
+
+  function confirmGardenAction(title, description, confirmLabel) {
+    return new Promise((resolve) => {
+      const overlay = PG.el('div', 'garden-confirm-overlay');
+      overlay.setAttribute('role', 'presentation');
+      const dialog = PG.el('section', 'garden-confirm-dialog');
+      dialog.setAttribute('role', 'dialog');
+      dialog.setAttribute('aria-modal', 'true');
+      dialog.setAttribute('aria-labelledby', 'garden-confirm-title');
+      dialog.append(PG.el('span', 'garden-confirm-kicker', 'GARDEN TOOL'));
+      dialog.append(PG.el('h2', null, title));
+      dialog.append(PG.el('p', null, description));
+      const actions = PG.el('div', 'garden-confirm-actions');
+      const cancel = PG.el('button', 'garden-confirm-button garden-confirm-cancel', 'Cancel');
+      cancel.type = 'button';
+      const confirm = PG.el('button', 'garden-confirm-button garden-confirm-accept', confirmLabel);
+      confirm.type = 'button';
+      const close = (value) => { overlay.remove(); resolve(value); };
+      cancel.addEventListener('click', () => close(false));
+      confirm.addEventListener('click', () => close(true));
+      overlay.addEventListener('click', (event) => { if (event.target === overlay) close(false); });
+      actions.append(cancel, confirm);
+      dialog.append(actions);
+      overlay.append(dialog);
+      document.body.append(overlay);
+      confirm.focus();
+    });
+  }
+
+  async function removePlant(slot, plantItemId) {
+    const tool = selectedItem();
+    if (!tool || selectedAction !== 'shovel' || busy) return;
+    const confirmed = await confirmGardenAction(
+      'Remove this plant?',
+      'The plant will be cleared from this plot and will not be returned to your seed inventory. Your shovel will stay in your inventory.',
+      'Remove plant'
+    );
+    if (!confirmed || busy) return;
+    await runAction(() => PG.api('/api/garden.php', {
+      method: 'POST',
+      body: { action: 'remove_plant', item_id: tool.id, plant_item_id: plantItemId, slot }
+    }), 'Plant removed. Your shovel is still in your inventory.');
   }
 
   async function placeDecor(slot, targetArea) {
@@ -316,11 +448,11 @@
       await reloadGarden();
       say('Choose a seed to plant, or select a tool or decoration from your inventory.');
       updateClock();
-      window.setInterval(() => { updateClock(); renderPlots(); }, 1000);
+      window.setInterval(updateClock, 1000);
+      window.setInterval(renderPlots, 15000);
     } catch (error) {
       say(error.message || 'Could not load your garden.', true);
       PG.toast(error.message || 'Could not load your garden.', true);
     }
   });
-  window.setInterval(updateClock, 1000);
 })();

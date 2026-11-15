@@ -16,11 +16,23 @@
 <body data-role="user">
   <div id="app-nav"></div>
   <main class="container page-main">
-    <div class="page-head"><h1>Toolbox</h1><p class="muted">Python ideas you have unlocked, with examples to copy into your own code.</p></div>
-    <div class="px-field">
-      <label class="px-label" for="search">Search topics</label>
-      <input class="px-input" id="search" type="search" placeholder="for example: loop" autocomplete="off">
-    </div>
+    <div class="page-head"><h1>Python Toolbox</h1><p class="muted">A growing field guide to Python syntax, concepts, examples, and common mistakes.</p></div>
+    <section class="toolbox-filters px-card" aria-label="Filter toolbox topics">
+      <div class="px-field">
+        <label class="px-label" for="search">Search topics</label>
+        <input class="px-input" id="search" type="search" placeholder="Search loops, lists, errors..." autocomplete="off">
+      </div>
+      <div class="px-field">
+        <label class="px-label" for="category-filter">Category</label>
+        <select class="px-input" id="category-filter"><option value="">All categories</option></select>
+      </div>
+      <div class="px-field">
+        <label class="px-label" for="difficulty-filter">Difficulty</label>
+        <select class="px-input" id="difficulty-filter">
+          <option value="">All levels</option><option>Beginner</option><option>Intermediate</option><option>Advanced</option>
+        </select>
+      </div>
+    </section>
     <p id="topic-count" class="muted" role="status"></p>
     <div id="topics" class="topic-list"></div>
   </main>
@@ -29,4 +41,3 @@
   <script src="js/toolbox.js"></script>
 </body>
 </html>
-

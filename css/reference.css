@@ -517,3 +517,167 @@ body[data-role="user"] { min-height: 100vh; background: linear-gradient(#52bddb 
   .season-widget { animation: none; }
   .season-rain, .season-sun, .season-leaves, .season-snow { animation: none; }
 }
+
+/* Expanded Toolbox and Progress components */
+.toolbox-filters { display:grid; grid-template-columns:2fr 1fr 1fr; gap:14px; padding:18px; margin-bottom:18px; background:#fff9e6; }
+.toolbox-filters .px-field { margin:0; }
+.topic-list { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr)); gap:16px; align-items:start; }
+.topic { padding:20px; background:#fffdf5; }
+.topic__top,.topic__code-head,.activity-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.topic__category { margin:0 0 4px; color:#3c9369; font-size:.75rem; font-weight:900; letter-spacing:.13em; text-transform:uppercase; }
+.topic__top h2 { margin:0; font-size:1.2rem; }
+.topic__difficulty { flex:none; padding:5px 9px; border-radius:5px; background:#e5efce; color:#41684f; font-size:.72rem; font-weight:800; }
+.topic__summary { margin:14px 0; color:#4e6d60; }
+.topic__label { margin:16px 0 7px; color:#496e5e; font-size:.82rem; }
+.topic__syntax,.topic__example { overflow:auto; padding:13px; border:1px solid #d4d8bf; border-radius:5px; background:#f1f3e9; color:#284c43; white-space:pre-wrap; font: .88rem/1.6 var(--font-code); }
+.topic__code-head { margin-top:14px; }
+.topic__code-head .topic__label { margin:0; }
+.topic__errors { margin:0; padding-left:20px; color:#765d4d; font-size:.88rem; }
+.topic__errors li+li { margin-top:5px; }
+.topic__actions { display:flex; justify-content:flex-end; margin-top:15px; }
+.topic.is-locked { opacity:.82; }
+.activity-card { padding:20px; background:#fff9e6; }
+.activity-heading { align-items:flex-start; margin-bottom:16px; }
+.activity-heading h2 { margin:0 0 5px; }
+.activity-heading p { margin:0; }
+.activity-legend { display:flex; align-items:center; gap:5px; color:#5d7668; font-size:.72rem; white-space:nowrap; }
+.activity-legend i,.activity-day { display:block; width:14px; height:14px; border:1px solid rgba(40,75,65,.12); border-radius:3px; }
+.activity-grid { display:grid; grid-template-columns:repeat(7,minmax(0,1fr)); gap:6px; max-width:420px; }
+.activity-day { width:100%; aspect-ratio:1; min-height:20px; background:#e8eadc; }
+.activity-day.level-1,.activity-legend .level-1 { background:#c5e5a6; }
+.activity-day.level-2,.activity-legend .level-2 { background:#8dcc81; }
+.activity-day.level-3,.activity-legend .level-3 { background:#4d9e6c; }
+.activity-day.level-4,.activity-legend .level-4 { background:#246c54; }
+.activity-legend .level-0 { background:#e8eadc; }
+.mastery-row { margin-bottom:13px; }
+.milestone.is-earned { border-color:#8ab97e; background:#f0f8df; }
+.milestone__date { display:block; margin-top:5px; color:#43815c; font-weight:800; }
+@media(max-width:700px) {
+  .toolbox-filters { grid-template-columns:1fr; }
+  .activity-heading { flex-direction:column; }
+  .activity-legend { white-space:normal; }
+}
+@media(prefers-reduced-motion:reduce) {
+  .topic,.topic * { scroll-behavior:auto; }
+}
+
+/* Harvest-ready crops */
+.plot.is-ready { border-color:#e7d078; box-shadow:0 6px 0 #7d633e,0 0 0 3px rgba(255,226,123,.25); cursor:pointer; }
+.plot.is-ready .plant-details { color:#fff7cb; background:rgba(38,91,57,.86); font-weight:900; }
+.plot.is-ready:hover { filter:brightness(1.08); transform:translateY(-3px); }
+
+.garden-decor-slot.is-filled { cursor:pointer; }
+.garden-decor-slot.is-filled:hover { filter:brightness(1.08); transform:translateY(-2px); }
+
+
+/* Recent XP reward history */
+.xp-history-card { padding:20px; background:#fffdf5; }
+.xp-history { display:grid; gap:8px; margin:0; padding:0; list-style:none; }
+.xp-history-item { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:11px 13px; border:1px solid #d7ddc9; border-radius:6px; background:#f7f8ed; }
+.xp-history-item > div { display:grid; gap:3px; }
+.xp-history-item small { color:#6d8174; font-size:.76rem; }
+.xp-history-amount { flex:none; color:#33865c; font:700 1rem var(--font-head); }
+
+
+/* Clear visible controls for removing or replacing placed garden decorations */
+.garden-decor-slot { position:relative; }
+.decor-slot-actions { display:flex; gap:4px; justify-content:center; flex-wrap:wrap; margin-top:3px; }
+.decor-slot-button { border:1px solid #8c6947; border-radius:6px; padding:3px 7px; background:#fff8e8; color:#553d28; font-size:.65rem; font-weight:1000; cursor:pointer; }
+.decor-remove-button { border-color:#b65b4d; background:#fae2d9; color:#873b30; }
+.decor-replace-button { border-color:#648b58; background:#e4f1d9; color:#315d35; }
+.garden-night .decor-slot-button { background:#38465a; color:#fff1cf; border-color:#a99b72; }
+.garden-night .decor-remove-button { background:#633d43; border-color:#d58b80; }
+.garden-night .decor-replace-button { background:#365b4b; border-color:#83b28c; }
+
+
+/* Pixel-art confirmation panel for garden tool actions */
+.garden-confirm-overlay {
+  position: fixed;
+  z-index: 100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(24, 43, 37, .68);
+}
+.garden-confirm-dialog {
+  width: min(430px, 100%);
+  padding: 24px;
+  color: #244b48;
+  background: #fff6df;
+  border: 3px solid #31564e;
+  border-radius: 5px;
+  box-shadow: 0 8px 0 #244b48, 0 16px 36px rgba(0,0,0,.28);
+  text-align: center;
+}
+.garden-confirm-kicker {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: #49845e;
+  font: 700 .72rem var(--font-head);
+  letter-spacing: .14em;
+}
+.garden-confirm-dialog h2 {
+  margin: 0 0 10px;
+  font: 700 1.45rem var(--font-head);
+  text-transform: uppercase;
+}
+.garden-confirm-dialog p {
+  margin: 0;
+  color: #587364;
+  font-weight: 800;
+  line-height: 1.55;
+}
+.garden-confirm-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 22px;
+}
+.garden-confirm-button {
+  min-height: 42px;
+  padding: 8px 15px;
+  border: 2px solid #31564e;
+  border-radius: 4px;
+  box-shadow: 0 4px 0 #31564e;
+  color: #244b48;
+  background: #f7e6bc;
+  font: 700 .9rem var(--font-head);
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.garden-confirm-accept {
+  color: #fffdf5;
+  background: #b65343;
+  border-color: #7c3b32;
+  box-shadow: 0 4px 0 #7c3b32;
+}
+.garden-confirm-button:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 #31564e;
+}
+.garden-confirm-button:focus-visible {
+  outline: 3px solid #e3a74d;
+  outline-offset: 3px;
+}
+.garden-night .garden-confirm-dialog {
+  color: #fff1cf;
+  background: #263b43;
+  border-color: #a99b72;
+  box-shadow: 0 8px 0 #172b32, 0 16px 36px rgba(0,0,0,.4);
+}
+.garden-night .garden-confirm-dialog p { color: #d4d9b7; }
+
+
+/* Wet soil feedback after using the watering can */
+.plot.is-wet {
+  background: radial-gradient(ellipse at 24% 76%, rgba(126,205,220,.78) 0 9%, transparent 10%), radial-gradient(ellipse at 76% 70%, rgba(126,205,220,.58) 0 7%, transparent 8%), linear-gradient(145deg,#765a4b,#4d5145);
+  border-color:#6faeb0;
+  box-shadow:0 6px 0 #394b45,inset 0 0 0 4px rgba(171,225,222,.24),0 0 0 3px rgba(126,205,220,.22);
+}
+.plot.is-wet .plant-details {
+  color:#e8ffff;
+  background:rgba(36,91,91,.9);
+  border:1px solid rgba(180,237,235,.55);
+}

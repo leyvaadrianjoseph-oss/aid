@@ -11,11 +11,12 @@
   <link rel="stylesheet" href="css/base.css">
   <link rel="stylesheet" href="css/pixel.css">
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/reference.css">
 </head>
 <body data-role="user">
   <div id="app-nav"></div>
   <main class="container page-main" id="progress-root">
-    <div class="page-head"><h1>My progress</h1></div>
+    <div class="page-head"><h1>My progress</h1><p class="muted">Every lesson completed is another step forward.</p></div>
     <div class="stack">
       <section class="px-card rank-card" aria-labelledby="rank-name">
         <div class="row"><span class="spr spr--lg" data-sprite="trophy"></span><div><p class="muted">Current rank</p><h2 id="rank-name">...</h2></div></div>
@@ -29,6 +30,15 @@
         <div class="px-card stat"><strong id="stat-done">0</strong><span class="muted">Levels done</span></div>
         <div class="px-card stat"><strong id="stat-streak">0</strong><span class="muted">Day streak</span></div>
         <div class="px-card stat"><strong id="stat-seeds">0</strong><span class="muted">Seeds</span></div>
+        <div class="px-card stat"><strong id="stat-attempts">0</strong><span class="muted">Code checks</span></div>
+      </section>
+      <section class="px-card activity-card" aria-labelledby="activity-title">
+        <div class="activity-heading"><div><h2 id="activity-title">Learning activity</h2><p id="activity-total" class="muted">Loading activity...</p></div><span class="activity-legend">Less <i class="level-0"></i><i class="level-1"></i><i class="level-2"></i><i class="level-3"></i><i class="level-4"></i> More</span></div>
+        <div id="activity-grid" class="activity-grid" aria-label="Last 35 days of completed lessons"></div>
+      </section>
+      <section class="px-card xp-history-card" aria-labelledby="xp-history-title">
+        <div class="activity-heading"><div><h2 id="xp-history-title">Recent XP</h2><p class="muted">Rewards earned from learning and growing.</p></div></div>
+        <ul id="xp-history" class="xp-history"></ul>
       </section>
       <section class="px-card" aria-labelledby="mastery-h">
         <h2 id="mastery-h">Mastery by concept</h2>
