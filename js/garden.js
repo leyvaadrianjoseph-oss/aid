@@ -173,9 +173,16 @@
       if (item) {
         button.append(PG.spriteEl(item.sprite, 'decor-sprite'));
         button.append(PG.el('small', 'decor-name', item.name));
-        button.setAttribute('aria-label', item.name + ' placed. Select to pick it up.');
-        button.title = 'Click to return this item to inventory';
-        button.addEventListener('click', () => pickupDecor(slot, area, Number(item.id)));
+        const chosen = selectedItem();
+        const canReplace = selectedAction === 'decor' && chosen && chosen.kind === 'decor'
+          && (chosen.sprite === 'fence' ? 'fence' : 'decor') === area
+          && Number(chosen.id) !== Number(item.id);
+        button.setAttribute('aria-label', item.name + ' placed. ' + (canReplace ? 'Select to replace it with ' + chosen.name : 'Select to return it to inventory.'));
+        button.title = canReplace ? 'Click to replace with ' + chosen.name : 'Click to remove and return to inventory';
+        button.addEventListener('click', () => {
+          if (canReplace) replaceDecor(slot, area, Number(chosen.id), item.name, chosen.name);
+          else pickupDecor(slot, area, Number(item.id));
+        });
       } else {
         button.append(PG.el('span', 'decor-plus', '+'));
         button.append(PG.el('small', null, area === 'fence' ? 'Fence' : 'Decor'));
@@ -197,6 +204,14 @@
       method: 'POST',
       body: { action: 'pickup_decor', item_id: itemId, area, slot }
     }), item.name + ' returned to your inventory.');
+  }
+
+  async function replaceDecor(slot, area, newItemId, oldName, newName) {
+    if (busy) return;
+    await runAction(() => PG.api('/api/garden.php', {
+      method: 'POST',
+      body: { action: 'replace_decor', item_id: newItemId, area, slot }
+    }), oldName + ' returned to inventory and replaced with ' + newName + '.');
   }
 
   function renderShop() {
