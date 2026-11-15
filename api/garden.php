@@ -127,6 +127,27 @@ if ($action === 'water') {
     json_out(['ok' => true, 'action' => 'water', 'boost_seconds' => $boost]);
 }
 
+if ($action === 'replace_decor') {
+    if ($kind !== 'decor') fail('Choose a decoration to place.');
+    $area = (string)($in['area'] ?? '');
+    if (!in_array($area, ['fence', 'decor'], true)) fail('Invalid decoration area.');
+    $slot = int_in($in, 'slot', 0, $area === 'fence' ? 7 : 3, -1);
+    if (($item['sprite'] === 'fence') !== ($area === 'fence')) fail('That decoration belongs in a different area.');
+    [$code, $result] = sb_raw('POST', '/rpc/garden_replace_decor', [
+        'p_user_id' => $me['id'],
+        'p_new_item_id' => $itemId,
+        'p_area' => $area,
+        'p_slot' => $slot
+    ]);
+    if ($code < 200 || $code >= 300) {
+        $message = is_array($result) ? (string)($result['message'] ?? $result['details'] ?? '') : '';
+        if (stripos($message, 'not in inventory') !== false) fail('You need one of that item in your inventory before replacing this space.', 409);
+        if (stripos($message, 'decoration not found') !== false) fail('That decoration has already moved. Reload your garden.', 404);
+        fail('Could not replace that decoration. Please try again.', 409);
+    }
+    json_out($result);
+}
+
 if ($action === 'pickup_decor') {
     if ($kind !== 'decor') fail('Choose a decoration to pick up.');
     $area = (string)($in['area'] ?? '');
