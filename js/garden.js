@@ -272,7 +272,7 @@
     dailyPurchased = Number(data.daily_purchased || 0);
     dailyLimit = Number(data.daily_limit || 100);
     PG.setStats({ seeds });
-    if (selectedId !== null && !byId(selectedId)) { selectedId = null; selectedAction = null; }
+    if (selectedId !== null && (!byId(selectedId) || (selectedAction === 'decor' && owned(selectedId) < 1))) { selectedId = null; selectedAction = null; }
     renderSelection(); renderPlots(); renderInventory(); renderDecor(); renderShop();
   }
 
