@@ -10,6 +10,7 @@
     mushroom: ['..rrrr..', '.rwrrwr.', 'rrrrrrrr', 'rwrrrrwr', '..wwww..', '..wwww..', '..wwww..', '........'],
     cactus: ['...ff...', '...ff...', '.f.ff.f.', '.f.ff.f.', '.ffffff.', '...ff...', '...ff...', '...ff...'],
     can: ['......bb', '.bbbb.bb', 'bbbbbbb.', 'bbbbbb..', 'bbbbbb..', 'bbbbbb..', '.bbbbb..', '........'],
+    shovel: ['....ss..', '....ss..', '....ss..', '....ss..', '...sss..', '..ttt...', '.tbbbt..', '..twt...'],
     fence: ['s..s..s.', 'sssssss.', 's..s..s.', 's..s..s.', 'sssssss.', 's..s..s.', 's..s..s.', '........'],
     pond: ['........', '..bbbb..', '.bbwbbb.', 'bbbbbbbb', 'bbbbbwbb', '.bbbbbb.', '..bbbb..', '........'],
     lantern: ['...yy...', '..tttt..', '..tyyt..', '..tyyt..', '..tttt..', '...ss...', '...ss...', '..ssss..'],
